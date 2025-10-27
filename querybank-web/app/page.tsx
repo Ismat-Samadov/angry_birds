@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, TrendingUp, Users, DollarSign, FileText, Sparkles, LogOut } from 'lucide-react';
+import { Send, Sparkles, LogOut, BarChart3 } from 'lucide-react';
 import DataChart from '@/components/DataChart';
-import StatsCard from '@/components/StatsCard';
 
 interface Message {
   id: string;
@@ -14,13 +13,6 @@ interface Message {
   chartConfig?: any;
   chartType?: string;
   query?: string;
-}
-
-interface Stats {
-  customers: number;
-  loans: number;
-  totalLoanBalance: number;
-  totalDeposits: number;
 }
 
 export default function Home() {
@@ -35,7 +27,6 @@ export default function Home() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
     // Load user from localStorage
@@ -43,18 +34,7 @@ export default function Home() {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
-    fetchStats();
   }, []);
-
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/stats');
-      const data = await response.json();
-      setStats(data);
-    } catch (error) {
-      console.error('Stats fetch error:', error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,16 +111,32 @@ export default function Home() {
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl">
-                <Sparkles className="h-6 w-6 text-white" />
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    QueryBank AI
+                  </h1>
+                  <p className="text-sm text-slate-600">Bank Məlumat Analizi</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  QueryBank AI
-                </h1>
-                <p className="text-sm text-slate-600">Bank Məlumat Analizi</p>
-              </div>
+              <nav className="flex space-x-2">
+                <button
+                  className="px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg font-medium"
+                >
+                  <span>AI Çat</span>
+                </button>
+                <button
+                  onClick={() => router.push('/reports')}
+                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition flex items-center space-x-2"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Hesabatlar</span>
+                </button>
+              </nav>
             </div>
             <div className="flex items-center space-x-4">
               {user && (
@@ -165,51 +161,11 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Stats Dashboard */}
-      {stats && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatsCard
-              title="Aktiv Müştərilər"
-              value={stats.customers.toLocaleString()}
-              icon={Users}
-              trend="+12.5%"
-              trendUp={true}
-              color="blue"
-            />
-            <StatsCard
-              title="Aktiv Kreditlər"
-              value={stats.loans.toLocaleString()}
-              icon={FileText}
-              trend="+8.2%"
-              trendUp={true}
-              color="green"
-            />
-            <StatsCard
-              title="Ümumi Kredit Balansı"
-              value={`${(stats.totalLoanBalance / 1000).toFixed(0)}K ₼`}
-              icon={TrendingUp}
-              trend="-2.3%"
-              trendUp={false}
-              color="purple"
-            />
-            <StatsCard
-              title="Ümumi Depozitlər"
-              value={`${(stats.totalDeposits / 1000).toFixed(0)}K ₼`}
-              icon={DollarSign}
-              trend="+15.7%"
-              trendUp={true}
-              color="indigo"
-            />
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
           {/* Chat Messages */}
-          <div className="h-[calc(100vh-450px)] overflow-y-auto p-6 space-y-4">
+          <div className="h-[calc(100vh-300px)] overflow-y-auto p-6 space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
