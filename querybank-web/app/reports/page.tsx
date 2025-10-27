@@ -18,6 +18,9 @@ import {
   Activity,
   Shield,
   Target,
+  Menu,
+  X,
+  Sparkles,
 } from 'lucide-react';
 import DataChart from '@/components/DataChart';
 import StatsCard from '@/components/StatsCard';
@@ -52,6 +55,7 @@ type TabType = 'overview' | 'customers' | 'loans' | 'risk';
 export default function ReportsPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,18 +119,21 @@ export default function ReportsPage() {
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3">
-                <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl">
-                  <BarChart3 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    Analitika Paneli
-                  </h1>
-                  <p className="text-sm text-slate-600">Məlumat təhlili və hesabatlar</p>
-                </div>
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl">
+                <BarChart3 className="h-6 w-6 text-white" />
               </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Analitika Paneli
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-600">Məlumat təhlili və hesabatlar</p>
+              </div>
+            </div>
+
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-6">
               <nav className="flex space-x-2">
                 <button
                   onClick={() => router.push('/')}
@@ -147,22 +154,82 @@ export default function ReportsPage() {
                   <span>SQL Konsolu</span>
                 </button>
               </nav>
+              <div className="flex items-center space-x-4">
+                {user && (
+                  <span className="text-sm text-slate-700 font-medium">
+                    {user.full_name}
+                  </span>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-slate-600 hover:text-slate-900 flex items-center space-x-1"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Çıxış</span>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              {user && (
-                <span className="text-sm text-slate-700 font-medium">
-                  {user.full_name}
-                </span>
-              )}
-              <button
-                onClick={handleLogout}
-                className="text-sm text-slate-600 hover:text-slate-900 flex items-center space-x-1"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Çıxış</span>
-              </button>
-            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden mt-4 pb-4 border-t border-slate-200 pt-4 space-y-2">
+              <button
+                onClick={() => {
+                  router.push('/');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition flex items-center space-x-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>AI Çat</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm bg-blue-50 text-blue-600 rounded-lg font-medium text-left flex items-center space-x-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>Analitika</span>
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/sql');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition flex items-center space-x-2"
+              >
+                <Terminal className="h-4 w-4" />
+                <span>SQL Konsolu</span>
+              </button>
+              <div className="pt-4 border-t border-slate-200 space-y-2">
+                {user && (
+                  <div className="px-4 py-2 text-sm text-slate-700 font-medium">
+                    {user.full_name}
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition flex items-center space-x-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Çıxış</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -210,8 +277,8 @@ export default function ReportsPage() {
 
         {/* Tabs */}
         <div className="mb-6">
-          <div className="border-b border-slate-200">
-            <nav className="flex space-x-8">
+          <div className="border-b border-slate-200 overflow-x-auto">
+            <nav className="flex space-x-4 sm:space-x-8 min-w-max sm:min-w-0">
               <button
                 onClick={() => setActiveTab('overview')}
                 className={`pb-4 px-1 border-b-2 font-medium text-sm transition flex items-center space-x-2 ${
@@ -280,17 +347,17 @@ export default function ReportsPage() {
                       <div className="grid grid-cols-3 gap-4">
                         <div>
                           <p className="text-xs text-slate-600">Müştəri Sayı</p>
-                          <p className="text-2xl font-bold text-slate-900">{analytics.highValueCustomers.count}</p>
+                          <p className="text-xl sm:text-2xl font-bold text-slate-900">{analytics.highValueCustomers.count}</p>
                         </div>
                         <div>
                           <p className="text-xs text-slate-600">Ümumi Balans</p>
-                          <p className="text-2xl font-bold text-slate-900">
+                          <p className="text-xl sm:text-2xl font-bold text-slate-900">
                             {(analytics.highValueCustomers.total_balance / 1000).toFixed(0)}K ₼
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-slate-600">Orta Kredit Reytinqi</p>
-                          <p className="text-2xl font-bold text-slate-900">
+                          <p className="text-xl sm:text-2xl font-bold text-slate-900">
                             {Math.round(analytics.highValueCustomers.avg_credit_score)}
                           </p>
                         </div>
@@ -304,9 +371,9 @@ export default function ReportsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Credit Score Distribution */}
                 {analytics.creditScoreDistribution && analytics.creditScoreDistribution.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-                    <h3 className="text-md font-semibold text-slate-900 mb-4">Kredit Reytinqi Bölgüsü</h3>
-                    <div className="h-80">
+                  <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-4 sm:p-6">
+                    <h3 className="text-sm sm:text-md font-semibold text-slate-900 mb-4">Kredit Reytinqi Bölgüsü</h3>
+                    <div className="h-64 sm:h-80">
                       <DataChart
                         data={analytics.creditScoreDistribution}
                         chartType="pie"
@@ -324,9 +391,9 @@ export default function ReportsPage() {
 
                 {/* Loan Status Distribution */}
                 {analytics.loanStatusDistribution && analytics.loanStatusDistribution.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-                    <h3 className="text-md font-semibold text-slate-900 mb-4">Kredit Status Bölgüsü</h3>
-                    <div className="h-80">
+                  <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-4 sm:p-6">
+                    <h3 className="text-sm sm:text-md font-semibold text-slate-900 mb-4">Kredit Status Bölgüsü</h3>
+                    <div className="h-64 sm:h-80">
                       <DataChart
                         data={analytics.loanStatusDistribution}
                         chartType="pie"
@@ -350,9 +417,9 @@ export default function ReportsPage() {
             <>
               {/* Customer Segmentation */}
               {analytics.customerSegmentation && analytics.customerSegmentation.length > 0 && (
-                <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-                  <h3 className="text-md font-semibold text-slate-900 mb-4">Müştəri Seqmentasiyası</h3>
-                  <div className="h-80">
+                <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-4 sm:p-6">
+                  <h3 className="text-sm sm:text-md font-semibold text-slate-900 mb-4">Müştəri Seqmentasiyası</h3>
+                  <div className="h-64 sm:h-80">
                     <DataChart
                       data={analytics.customerSegmentation}
                       chartType="bar"
@@ -370,8 +437,8 @@ export default function ReportsPage() {
 
               {/* Top Customers Table */}
               {analytics.topCustomers && analytics.topCustomers.length > 0 && (
-                <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-                  <h3 className="text-md font-semibold text-slate-900 mb-4">Ən Yüksək Balansa Malik Müştərilər (Top 10)</h3>
+                <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-4 sm:p-6">
+                  <h3 className="text-sm sm:text-md font-semibold text-slate-900 mb-4">Ən Yüksək Balansa Malik Müştərilər (Top 10)</h3>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200 text-sm">
                       <thead className="bg-slate-50">
@@ -449,9 +516,9 @@ export default function ReportsPage() {
             <>
               {/* Loans by Type */}
               {analytics.loansByType && analytics.loansByType.length > 0 && (
-                <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-                  <h3 className="text-md font-semibold text-slate-900 mb-4">Kredit Növlərinə Görə Bölgü</h3>
-                  <div className="h-80">
+                <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-4 sm:p-6">
+                  <h3 className="text-sm sm:text-md font-semibold text-slate-900 mb-4">Kredit Növlərinə Görə Bölgü</h3>
+                  <div className="h-64 sm:h-80">
                     <DataChart
                       data={analytics.loansByType}
                       chartType="bar"

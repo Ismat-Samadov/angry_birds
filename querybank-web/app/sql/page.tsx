@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Terminal, MessageSquare, BarChart3, LogOut, Play, Copy, Trash2, Clock, Database } from 'lucide-react';
+import { Terminal, MessageSquare, BarChart3, LogOut, Play, Copy, Trash2, Clock, Database, Menu, X } from 'lucide-react';
 
 interface QueryResult {
   success: boolean;
@@ -18,6 +18,7 @@ interface QueryResult {
 export default function SQLConsolePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sql, setSql] = useState('');
   const [result, setResult] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -97,18 +98,21 @@ export default function SQLConsolePage() {
       <header className="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3">
-                <div className="bg-gradient-to-br from-green-600 to-emerald-600 p-2 rounded-xl">
-                  <Terminal className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                    SQL Konsolu
-                  </h1>
-                  <p className="text-sm text-slate-400">Birbaşa verilənlər bazası sorğusu</p>
-                </div>
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-br from-green-600 to-emerald-600 p-2 rounded-xl">
+                <Terminal className="h-6 w-6 text-white" />
               </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
+                  SQL Konsolu
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-400">Birbaşa verilənlər bazası sorğusu</p>
+              </div>
+            </div>
+
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-6">
               <nav className="flex space-x-2">
                 <button
                   onClick={() => router.push('/')}
@@ -129,22 +133,82 @@ export default function SQLConsolePage() {
                   <span>SQL Konsolu</span>
                 </button>
               </nav>
+              <div className="flex items-center space-x-4">
+                {user && (
+                  <span className="text-sm text-slate-300 font-medium">
+                    {user.full_name}
+                  </span>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-slate-400 hover:text-white flex items-center space-x-1"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Çıxış</span>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              {user && (
-                <span className="text-sm text-slate-300 font-medium">
-                  {user.full_name}
-                </span>
-              )}
-              <button
-                onClick={handleLogout}
-                className="text-sm text-slate-400 hover:text-white flex items-center space-x-1"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Çıxış</span>
-              </button>
-            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden mt-4 pb-4 border-t border-slate-700 pt-4 space-y-2">
+              <button
+                onClick={() => {
+                  router.push('/');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition flex items-center space-x-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>AI Çat</span>
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/reports');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition flex items-center space-x-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>Analitika</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm bg-green-600/20 text-green-400 rounded-lg font-medium text-left flex items-center space-x-2"
+              >
+                <Terminal className="h-4 w-4" />
+                <span>SQL Konsolu</span>
+              </button>
+              <div className="pt-4 border-t border-slate-700 space-y-2">
+                {user && (
+                  <div className="px-4 py-2 text-sm text-slate-300 font-medium">
+                    {user.full_name}
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-sm text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition flex items-center space-x-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Çıxış</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -164,9 +228,9 @@ export default function SQLConsolePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* SQL Editor - Left Column (2/3 width) */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Query Editor */}
             <div className="bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
               <div className="border-b border-slate-700 px-4 py-3 flex items-center justify-between">
@@ -191,12 +255,12 @@ export default function SQLConsolePage() {
                   </button>
                 </div>
               </div>
-              <div className="p-4">
+              <div className="p-3 sm:p-4">
                 <textarea
                   value={sql}
                   onChange={(e) => setSql(e.target.value)}
                   placeholder="SELECT * FROM demo_bank.customers LIMIT 10;"
-                  className="w-full h-64 bg-slate-900 text-green-400 font-mono text-sm p-4 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                  className="w-full h-48 sm:h-64 bg-slate-900 text-green-400 font-mono text-xs sm:text-sm p-3 sm:p-4 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                   spellCheck={false}
                 />
                 <div className="flex items-center justify-between mt-4">
@@ -206,7 +270,7 @@ export default function SQLConsolePage() {
                   <button
                     onClick={handleExecute}
                     disabled={loading || !sql.trim()}
-                    className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium flex items-center space-x-2"
+                    className="px-4 py-2 sm:px-6 sm:py-2.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium flex items-center space-x-2"
                   >
                     <Play className="h-4 w-4" />
                     <span>{loading ? 'İcra edilir...' : 'İcra Et'}</span>
@@ -292,7 +356,7 @@ export default function SQLConsolePage() {
           </div>
 
           {/* Sidebar - Right Column (1/3 width) */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Example Queries */}
             <div className="bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
               <div className="border-b border-slate-700 px-4 py-3">
