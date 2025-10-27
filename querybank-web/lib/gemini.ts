@@ -32,6 +32,8 @@ export async function generateQuery(userQuestion: string): Promise<QueryResponse
 
 User Question: "${userQuestion}"
 
+IMPORTANT: If the user's input is a greeting (salam, hello, hi, etc.), random gibberish, or not a real question about banking data, respond with an error by setting query to "ERROR" and explanation in Azerbaijani explaining the issue.
+
 Database Schema (demo_bank):
 - Table: customers
   Columns: customer_id, first_name, last_name, account_type, account_balance, account_status, credit_score
@@ -67,8 +69,8 @@ Important Rules:
 7. Write explanation in Azerbaijani language
 8. Return ONLY the JSON object, no additional text
 
-Example question: "Ən yüksək balansa malik müştərilər"
-Example response:
+Example 1 - Valid question: "Ən yüksək balansa malik müştərilər"
+Response:
 {
   "query": "SET search_path TO demo_bank; SELECT first_name, last_name, account_balance FROM customers ORDER BY account_balance DESC LIMIT 10",
   "needs_chart": true,
@@ -81,6 +83,16 @@ Example response:
     "ylabel": "Balans (₼)"
   },
   "explanation": "Ən yüksək hesab balansına malik 10 müştəri göstərilir."
+}
+
+Example 2 - Invalid input (greeting, gibberish): "salam" or "asdfjkl"
+Response:
+{
+  "query": "ERROR",
+  "needs_chart": false,
+  "chart_type": null,
+  "chart_config": null,
+  "explanation": "Daxil etdiyiniz sorğu anlaşıqlı deyil. Zəhmət olmasa bank məlumatları haqqında konkret sual verin."
 }`;
 
   try {

@@ -122,8 +122,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate question is meaningful (not random gibberish)
+    const trimmedQuestion = question.trim();
+    const hasLetters = /[a-zA-Zəüöğışçİ]/i.test(trimmedQuestion);
+    const hasMinLength = trimmedQuestion.length >= 3;
+    const isNotOnlySpecialChars = /[a-zA-Z0-9əüöğışçİ]/.test(trimmedQuestion);
+
+    if (!hasLetters || !hasMinLength || !isNotOnlySpecialChars) {
+      return NextResponse.json(
+        { error: 'Daxil etdiyiniz sorğu anlaşıqlı deyil.' },
+        { status: 400 }
+      );
+    }
+
     // Generate SQL query using AI
     const queryInfo = await generateQuery(question);
+
+    // Check if AI determined this is an invalid/nonsensical question
+    if (queryInfo.query === 'ERROR' || queryInfo.query.includes('ERROR')) {
+      return NextResponse.json(
+        { error: queryInfo.explanation || 'Daxil etdiyiniz sorğu anlaşıqlı deyil.' },
+        { status: 400 }
+      );
+    }
 
     // Execute the query
     let result;
