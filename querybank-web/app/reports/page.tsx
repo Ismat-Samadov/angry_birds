@@ -137,6 +137,12 @@ export default function ReportsPage() {
               <nav className="flex space-x-2">
                 <button
                   onClick={() => router.push('/')}
+                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+                >
+                  <span>Əsas Səhifə</span>
+                </button>
+                <button
+                  onClick={() => router.push('/chat')}
                   className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition flex items-center space-x-2"
                 >
                   <MessageSquare className="h-4 w-4" />
@@ -185,6 +191,15 @@ export default function ReportsPage() {
               <button
                 onClick={() => {
                   router.push('/');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+              >
+                Əsas Səhifə
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/chat');
                   setMobileMenuOpen(false);
                 }}
                 className="w-full px-4 py-3 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition flex items-center space-x-2"
