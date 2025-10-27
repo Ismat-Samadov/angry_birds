@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, Sparkles, LogOut, BarChart3, Terminal } from 'lucide-react';
+import { Send, Sparkles, LogOut, BarChart3, Terminal, Menu, X } from 'lucide-react';
 import DataChart from '@/components/DataChart';
 
 interface Message {
@@ -18,6 +18,7 @@ interface Message {
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -111,18 +112,21 @@ export default function Home() {
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3">
-                <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    QueryBank AI
-                  </h1>
-                  <p className="text-sm text-slate-600">Bank Məlumat Analizi</p>
-                </div>
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl">
+                <Sparkles className="h-6 w-6 text-white" />
               </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  QueryBank AI
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-600">Bank Məlumat Analizi</p>
+              </div>
+            </div>
+
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-6">
               <nav className="flex space-x-2">
                 <button
                   className="px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg font-medium"
@@ -144,42 +148,104 @@ export default function Home() {
                   <span>SQL Konsolu</span>
                 </button>
               </nav>
+              <div className="flex items-center space-x-4">
+                {user && (
+                  <span className="text-sm text-slate-700 font-medium">
+                    {user.full_name}
+                  </span>
+                )}
+                <button
+                  onClick={async () => {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    router.push('/login');
+                  }}
+                  className="text-sm text-slate-600 hover:text-slate-900 flex items-center space-x-1"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Çıxış</span>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              {user && (
-                <span className="text-sm text-slate-700 font-medium">
-                  {user.full_name}
-                </span>
-              )}
-              <button
-                onClick={async () => {
-                  await fetch('/api/auth/logout', { method: 'POST' });
-                  localStorage.removeItem('token');
-                  localStorage.removeItem('user');
-                  router.push('/login');
-                }}
-                className="text-sm text-slate-600 hover:text-slate-900 flex items-center space-x-1"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Çıxış</span>
-              </button>
-            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden mt-4 pb-4 border-t border-slate-200 pt-4 space-y-2">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm bg-blue-50 text-blue-600 rounded-lg font-medium text-left"
+              >
+                AI Çat
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/reports');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition flex items-center space-x-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>Analitika</span>
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/sql');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition flex items-center space-x-2"
+              >
+                <Terminal className="h-4 w-4" />
+                <span>SQL Konsolu</span>
+              </button>
+              <div className="pt-4 border-t border-slate-200 space-y-2">
+                {user && (
+                  <div className="px-4 py-2 text-sm text-slate-700 font-medium">
+                    {user.full_name}
+                  </div>
+                )}
+                <button
+                  onClick={async () => {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    router.push('/login');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition flex items-center space-x-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Çıxış</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
           {/* Chat Messages */}
-          <div className="h-[calc(100vh-300px)] overflow-y-auto p-6 space-y-4">
+          <div className="h-[calc(100vh-280px)] sm:h-[calc(100vh-300px)] overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-3xl rounded-2xl px-6 py-4 ${
+                  className={`max-w-[90%] sm:max-w-3xl rounded-2xl px-4 py-3 sm:px-6 sm:py-4 ${
                     message.type === 'user'
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
                       : 'bg-slate-100 text-slate-900'
@@ -260,7 +326,7 @@ export default function Home() {
           </div>
 
           {/* Example Questions */}
-          <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
+          <div className="px-3 sm:px-6 py-3 bg-slate-50 border-t border-slate-200">
             <p className="text-xs text-slate-600 mb-2">Nümunə suallar:</p>
             <div className="flex flex-wrap gap-2">
               {exampleQuestions.map((question, idx) => (
@@ -276,22 +342,22 @@ export default function Home() {
           </div>
 
           {/* Input Form */}
-          <form onSubmit={handleSubmit} className="p-6 bg-white border-t border-slate-200">
-            <div className="flex space-x-4">
+          <form onSubmit={handleSubmit} className="p-3 sm:p-6 bg-white border-t border-slate-200">
+            <div className="flex space-x-2 sm:space-x-4">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Sualınızı yazın..."
-                className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 placeholder-slate-400"
+                className="flex-1 px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 placeholder-slate-400"
                 disabled={loading}
               />
               <button
                 type="submit"
                 disabled={loading || !input.trim()}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center space-x-2 font-medium"
+                className="px-4 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center space-x-2 font-medium text-sm sm:text-base"
               >
-                <span>Göndər</span>
+                <span className="hidden sm:inline">Göndər</span>
                 <Send className="h-4 w-4" />
               </button>
             </div>
