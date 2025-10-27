@@ -3,130 +3,107 @@
 import { useRouter } from 'next/navigation';
 import {
   Sparkles, Terminal, Shield, Zap,
-  TrendingUp, Users, DollarSign, Clock, Award, Brain,
-  LineChart, PieChart, Activity, ArrowRight, CheckCircle2, Star
+  Users, Award, Brain,
+  PieChart, Activity, ArrowRight, CheckCircle2,
+  X, AlertCircle, Check, MessageSquare, BarChart
 } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
 
-  const features = [
+  const problemPoints = [
     {
-      icon: Brain,
-      title: 'AI-Powered Intelligence',
-      description: 'Təbii dildə suallar verin. AI avtomatik SQL yaradır və nəticələri saniyələrdə gətirir',
-      color: 'from-blue-600 to-indigo-600',
-      badge: 'Gemini 2.5 Flash',
+      icon: X,
+      title: 'SQL Bilməliyəm',
+      description: 'Sadə sual üçün belə texniki komandadan asılıyam'
     },
     {
-      icon: LineChart,
-      title: '15+ Real-Time Analytics',
-      description: 'Risk analizi, müştəri seqmentasiyası, kredit performansı - hamısı bir paneldə',
-      color: 'from-purple-600 to-pink-600',
-      badge: 'Instant Results',
+      icon: X,
+      title: 'Saatlarla Gözləmək',
+      description: 'Hər analiz üçün IT departamentindən növbə gözləyirəm'
     },
     {
-      icon: Terminal,
-      title: 'Advanced SQL Console',
-      description: 'Təcrübəli istifadəçilər üçün professional SQL interfeysi. Query history və schema reference',
-      color: 'from-green-600 to-emerald-600',
-      badge: 'Power Users',
+      icon: X,
+      title: 'Excel Çətinlikləri',
+      description: 'Verilənləri əl ilə export edib, pivot table yaratmalıyam'
     },
     {
-      icon: Shield,
-      title: 'Enterprise Security',
-      description: 'JWT authentication, bcrypt encryption, SQL injection protection, read-only database access',
-      color: 'from-red-600 to-orange-600',
-      badge: 'Bank-Grade',
+      icon: X,
+      title: 'Real-time Yoxdur',
+      description: 'Dünənki data ilə bu günkü qərar verməliyəm'
     },
   ];
 
-  const metrics = [
+  const solutionPoints = [
     {
-      value: '91.5%',
-      label: 'Daha Sürətli',
-      subtitle: 'AI sorğu optimizasiyası',
+      icon: MessageSquare,
+      title: 'Sadə Dillə Danış',
+      description: 'SQL öyrənməyə ehtiyac yoxdur',
+      example: '"Ən yüksək balansa malik 10 müştəri göstər"'
+    },
+    {
       icon: Zap,
-      color: 'from-yellow-500 to-orange-500'
+      title: 'Saniyələrdə Cavab Al',
+      description: 'IT komandası gözləməyə ehtiyac yoxdur',
+      example: '2-3 saniyədə tam analiz və qrafiklər'
     },
     {
-      value: '1.5s',
-      label: 'Yükləmə Vaxtı',
-      subtitle: '15 parallel SQL query',
-      icon: Clock,
-      color: 'from-blue-500 to-cyan-500'
+      icon: BarChart,
+      title: 'Avtomatik Vizuallaşdırma',
+      description: 'Excel manipulyasiyasına ehtiyac yoxdur',
+      example: 'Qrafiklər avtomatik yaranır və yüklənir'
     },
     {
-      value: '15+',
-      label: 'Analitik Modullar',
-      subtitle: 'Hazır business insights',
-      icon: PieChart,
-      color: 'from-purple-500 to-pink-500'
-    },
-    {
-      value: '100%',
-      label: 'Mobil Uyğun',
-      subtitle: 'Responsive design',
       icon: Activity,
-      color: 'from-green-500 to-emerald-500'
+      title: 'Canlı Məlumat',
+      description: 'Köhnə data ilə işləməyə ehtiyac yoxdur',
+      example: 'Real-time bank database connection'
     },
   ];
 
   const useCases = [
     {
-      icon: Users,
-      title: 'Müştəri Analizi',
-      items: [
-        'Top 10 ən yüksək balansa malik müştərilər',
-        'Müştəri seqmentasiyası (Premium/Gold/Silver)',
-        'Kredit reytinqi bölgüsü və trend',
-      ]
+      role: 'Risk Manager',
+      problem: 'Yüksək riskli müştəriləri tez müəyyənləşdirməliyəm, amma SQL bilmirəm',
+      solution: 'Sadəcə soruşun: "Kredit reytinqi 650-dən aşağı və krediti 20K-dan çox olan müştərilər"',
+      result: '2 saniyədə cavab + qrafik + risk səviyyəsi analizi',
+      color: 'from-red-500 to-orange-500'
     },
     {
-      icon: TrendingUp,
-      title: 'Risk Menecmenti',
-      items: [
-        'Yüksək riskli müştərilərin identifikasiyası',
-        'Kredit defolt dərəcəsi analizi',
-        'Portfolio risk bölgüsü',
-      ]
+      role: 'Branch Manager',
+      problem: 'Hər həftə filialın performansını analiz etməliyəm, texniki dəstək lazımdır',
+      solution: 'İstənilən vaxt soruşun: "Bu ay ən çox əməliyyat edən müştərilər kimdir?"',
+      result: 'Dərhal cavab, təkrar suallar üçün texniki komandaya müraciət etməyə ehtiyac yoxdur',
+      color: 'from-blue-500 to-cyan-500'
     },
     {
-      icon: DollarSign,
-      title: 'Kredit Performansı',
-      items: [
-        'Kredit növlərinə görə balans',
-        'Aktiv/ödənilmiş/defolt statistikaları',
-        'Ən çox əməliyyat edən müştərilər',
-      ]
+      role: 'Credit Officer',
+      problem: 'Kredit portfelini izləyirəm, amma data hər dəfə Excel-də işləməli',
+      solution: 'Təbii dildə: "Defolt dərəcəsi ən yüksək olan kredit növləri"',
+      result: 'Avtomatik qrafik, Excel-ə export etməyə ehtiyac yoxdur',
+      color: 'from-purple-500 to-pink-500'
     },
   ];
 
-  const testimonials = [
-    {
-      quote: 'Data analizi üçün sərf etdiyimiz vaxt 70% azaldı. İndi real-time insights alırıq.',
-      author: 'Bank Manager',
-      role: 'Risk Menecmenti',
-      rating: 5,
-    },
-    {
-      quote: 'Təbii dildə sual vermək oyunu dəyişdi. SQL bilməyən komanda üzvləri də analiz edir.',
-      author: 'Operations Director',
-      role: 'Business Operations',
-      rating: 5,
-    },
-    {
-      quote: 'Mobil versiya çox güclüdür. Hər yerdə, istənilən vaxt məlumata çıxışım var.',
-      author: 'Executive',
-      role: 'C-Level Management',
-      rating: 5,
-    },
-  ];
+  const beforeAfter = {
+    before: [
+      { time: '2-3 saat', task: 'IT komandası sorğu yazır' },
+      { time: '30 dəqiqə', task: 'Excel-ə export və təmizləmə' },
+      { time: '1 saat', task: 'Pivot table və qrafik yaratma' },
+      { time: '30 dəqiqə', task: 'PowerPoint-ə əlavə etmə' },
+    ],
+    after: [
+      { time: '5 saniyə', task: 'Sualı təbii dildə yazın' },
+      { time: '2 saniyə', task: 'AI avtomatik SQL yaradır' },
+      { time: '1 saniyə', task: 'Nəticə və qrafik hazırdır' },
+      { time: '0 saniyə', task: 'Texniki biliyə ehtiyac yoxdur' },
+    ]
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/10">
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-3">
@@ -134,120 +111,120 @@ export default function LandingPage() {
                 <Sparkles className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">QueryBank AI</h2>
-                <p className="text-xs text-blue-300">Enterprise Banking Analytics</p>
+                <h2 className="text-xl font-bold text-slate-900">QueryBank AI</h2>
+                <p className="text-xs text-slate-600">SQL Bilməyə Ehtiyac Yoxdur</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push('/login')}
-                className="hidden sm:block px-5 py-2 text-white/80 hover:text-white transition font-medium"
+                className="hidden sm:block px-5 py-2 text-slate-700 hover:text-slate-900 transition font-medium"
               >
                 Daxil Ol
               </button>
               <button
                 onClick={() => router.push('/login')}
-                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition font-semibold shadow-lg shadow-blue-500/50"
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition font-semibold shadow-lg shadow-blue-500/30"
               >
-                Demo Başlat
+                Pulsuz Sınayın
               </button>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <div className="relative overflow-hidden pt-32 pb-20">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-500/5 to-transparent" />
-
-        {/* Glowing orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-700" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-10">
-            {/* Badge */}
-            <div className="inline-flex items-center space-x-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-5 py-2 backdrop-blur-sm">
-              <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-              <span className="text-sm text-blue-300 font-medium">Powered by Google Gemini 2.5 Flash</span>
+      {/* Problem Statement Hero */}
+      <div className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Problem Badge */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center space-x-2 bg-red-50 border border-red-200 rounded-full px-5 py-2.5">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <span className="text-sm font-semibold text-red-700">PROBLEM</span>
             </div>
+          </div>
 
-            {/* Main Headline */}
-            <div className="space-y-6">
-              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white leading-none">
-                Bank Məlumatlarını
-                <br />
-                <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  Saniyələrdə Təhlil Edin
-                </span>
-              </h1>
-              <p className="text-xl sm:text-2xl text-slate-300 max-w-4xl mx-auto leading-relaxed font-light">
-                AI-powered analytics platform. Təbii dildə sual verin, real-time insights alın.
-                <br className="hidden sm:block" />
-                <span className="text-blue-400 font-semibold">91.5% daha sürətli</span> məlumat analizi.
-              </p>
-            </div>
+          {/* Main Problem Statement */}
+          <div className="text-center space-y-6 mb-16">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 leading-tight">
+              SQL Bilmədən
+              <br />
+              <span className="text-red-600">Bank Məlumatlarını</span>
+              <br />
+              Necə Təhlil Edim?
+            </h1>
+            <p className="text-xl sm:text-2xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
+              Siz bank menecerisiniz. Data analizi lazımdır, amma SQL bilmirsiniz.
+              <br className="hidden sm:block" />
+              Hər dəfə IT komandası gözləməli, Excel-lə əl ilə işləməlisiniz.
+              <br className="hidden sm:block" />
+              <span className="font-bold text-slate-900">Bu problem həll edildi.</span>
+            </p>
+          </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-              <button
-                onClick={() => router.push('/login')}
-                className="group px-10 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all font-bold text-lg shadow-2xl shadow-blue-500/50 hover:shadow-blue-500/70 hover:scale-105 flex items-center space-x-3"
+          {/* Problem Points Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+            {problemPoints.map((point, idx) => (
+              <div
+                key={idx}
+                className="bg-white border-2 border-red-200 rounded-2xl p-6 hover:border-red-300 transition-all"
               >
-                <span>Pulsuz Başlayın</span>
-                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button
-                onClick={() => {
-                  document.getElementById('demo-section')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-10 py-5 bg-white/5 backdrop-blur-md border border-white/10 text-white rounded-2xl hover:bg-white/10 transition-all font-semibold text-lg hover:scale-105"
-              >
-                Demo Baxın
-              </button>
-            </div>
-
-            {/* Demo Credentials Box */}
-            <div className="inline-block bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
-              <div className="flex items-center justify-center space-x-2 mb-3">
-                <Shield className="h-4 w-4 text-green-400" />
-                <p className="text-sm text-blue-300 font-semibold">Instant Demo Access</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div className="bg-white/5 rounded-xl p-3">
-                  <p className="text-blue-400 text-xs mb-1">Email</p>
-                  <p className="text-white font-mono font-semibold">demo@querybank.az</p>
+                <div className="bg-red-100 p-3 rounded-xl inline-block mb-4">
+                  <point.icon className="h-6 w-6 text-red-600" />
                 </div>
-                <div className="bg-white/5 rounded-xl p-3">
-                  <p className="text-blue-400 text-xs mb-1">Password</p>
-                  <p className="text-white font-mono font-semibold">demo123</p>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">{point.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{point.description}</p>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Metrics Section */}
-      <div className="relative py-20 bg-gradient-to-b from-slate-950 to-slate-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {metrics.map((metric, idx) => (
+      {/* Solution Hero */}
+      <div className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-green-50 to-emerald-50">
+        <div className="max-w-6xl mx-auto">
+          {/* Solution Badge */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-300 rounded-full px-5 py-2.5">
+              <Check className="h-5 w-5 text-green-600" />
+              <span className="text-sm font-semibold text-green-700">HƏLL</span>
+            </div>
+          </div>
+
+          <div className="text-center space-y-6 mb-16">
+            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 leading-tight">
+              Sadəcə
+              <span className="text-green-600"> Sualınızı Yazın</span>
+              <br />
+              AI Qalanını Edir
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+              QueryBank AI təbii Azərbaycan dilində suallarınızı başa düşür,
+              <br />
+              avtomatik SQL yaradır və saniyələrdə cavab gətirir.
+              <br />
+              <span className="font-bold text-green-600">SQL, Python və ya Excel bilməyə ehtiyac yoxdur.</span>
+            </p>
+          </div>
+
+          {/* Solution Points Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {solutionPoints.map((point, idx) => (
               <div
                 key={idx}
-                className="relative group"
+                className="bg-white border border-green-200 rounded-2xl p-8 hover:border-green-400 hover:shadow-xl transition-all"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all" />
-                <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8 group-hover:border-white/20 transition-all">
-                  <div className={`inline-block bg-gradient-to-br ${metric.color} p-3 rounded-2xl mb-4`}>
-                    <metric.icon className="h-6 w-6 text-white" />
+                <div className="flex items-start space-x-4">
+                  <div className="bg-gradient-to-br from-green-500 to-emerald-500 p-3 rounded-xl flex-shrink-0">
+                    <point.icon className="h-6 w-6 text-white" />
                   </div>
-                  <div className="text-5xl font-black text-white mb-2">{metric.value}</div>
-                  <div className="text-lg font-semibold text-slate-200 mb-1">{metric.label}</div>
-                  <div className="text-sm text-slate-400">{metric.subtitle}</div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">{point.title}</h3>
+                    <p className="text-slate-600 mb-3">{point.description}</p>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-sm text-green-800 font-medium">{point.example}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -255,114 +232,194 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Features Section */}
-      <div id="demo-section" className="relative py-24 bg-slate-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <div className="inline-block bg-blue-500/10 border border-blue-500/30 rounded-full px-4 py-2 mb-6">
-              <span className="text-sm text-blue-400 font-semibold">FEATURES</span>
+      {/* Demo Credentials - Prominent */}
+      <div className="relative py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 to-indigo-600">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <Shield className="h-6 w-6 text-white" />
+            <h3 className="text-2xl font-bold text-white">2 Dəqiqədə Sınayın - Pulsuz Demo</h3>
+          </div>
+          <p className="text-blue-100 mb-6">Qeydiyyat tələb olunmur. Dərhal başlayın.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto mb-6">
+            <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-5">
+              <p className="text-blue-200 text-sm mb-2">Email</p>
+              <p className="text-white font-mono font-bold text-lg">demo@querybank.az</p>
             </div>
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-6">
-              Enterprise-Grade Analytics
+            <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-5">
+              <p className="text-blue-200 text-sm mb-2">Password</p>
+              <p className="text-white font-mono font-bold text-lg">demo123</p>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push('/login')}
+            className="group px-12 py-5 bg-white text-blue-600 rounded-2xl hover:bg-blue-50 transition-all font-black text-xl shadow-2xl hover:scale-105 inline-flex items-center space-x-3"
+          >
+            <span>İndi Sınayın</span>
+            <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
+          </button>
+        </div>
+      </div>
+
+      {/* Real Use Cases */}
+      <div className="relative py-24 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-block bg-blue-50 border border-blue-200 rounded-full px-4 py-2 mb-6">
+              <span className="text-sm text-blue-700 font-semibold">REAL SCENARIOS</span>
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-6">
+              Sizin Kimi Menecerlər Necə İstifadə Edir?
             </h2>
-            <p className="text-xl text-slate-400 max-w-3xl mx-auto">
-              Professional banking insights. Real-time data. AI-powered intelligence.
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              Real vəziyyətlər. Real problemlər. Real həllər.
+            </p>
+          </div>
+
+          <div className="space-y-8">
+            {useCases.map((useCase, idx) => (
+              <div
+                key={idx}
+                className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-3xl p-8 hover:shadow-2xl transition-all"
+              >
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  {/* Role */}
+                  <div className="lg:col-span-2">
+                    <div className={`bg-gradient-to-br ${useCase.color} p-4 rounded-2xl inline-block`}>
+                      <Users className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 mt-4">{useCase.role}</h3>
+                  </div>
+
+                  {/* Problem */}
+                  <div className="lg:col-span-3">
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-red-700 mb-2">PROBLEM</p>
+                      <p className="text-sm text-slate-700">{useCase.problem}</p>
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <div className="lg:col-span-1 flex justify-center">
+                    <ArrowRight className="h-8 w-8 text-slate-300" />
+                  </div>
+
+                  {/* Solution */}
+                  <div className="lg:col-span-3">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-blue-700 mb-2">HƏLL</p>
+                      <p className="text-sm text-slate-700 italic">"{useCase.solution}"</p>
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <div className="lg:col-span-1 flex justify-center">
+                    <ArrowRight className="h-8 w-8 text-slate-300" />
+                  </div>
+
+                  {/* Result */}
+                  <div className="lg:col-span-2">
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-green-700 mb-2">NƏTİCƏ</p>
+                      <p className="text-sm text-slate-700 font-medium">{useCase.result}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Before/After Comparison */}
+      <div className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-6">
+              4 Saat → 8 Saniyə
+            </h2>
+            <p className="text-xl text-slate-600">
+              Tipik analiz prosesinin nə qədər dəyişdiyinə baxın
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {features.map((feature, idx) => (
-              <div
-                key={idx}
-                className="group relative"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all" />
-                <div className="relative bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 group-hover:border-white/20 transition-all h-full">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className={`bg-gradient-to-br ${feature.color} p-4 rounded-2xl`}>
-                      <feature.icon className="h-8 w-8 text-white" />
+            {/* Before */}
+            <div className="bg-white border-2 border-red-200 rounded-3xl p-8">
+              <div className="bg-red-100 p-3 rounded-xl inline-block mb-6">
+                <X className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">ƏVVƏL</h3>
+              <p className="text-slate-600 mb-8">Ənənəvi yol (texniki asılılıq)</p>
+              <div className="space-y-4">
+                {beforeAfter.before.map((step, idx) => (
+                  <div key={idx} className="flex items-start space-x-4">
+                    <div className="bg-red-100 text-red-600 rounded-lg px-3 py-1 text-sm font-bold whitespace-nowrap">
+                      {step.time}
                     </div>
-                    <span className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1 text-xs font-semibold text-white">
-                      {feature.badge}
-                    </span>
+                    <p className="text-slate-700 flex-1">{step.task}</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">{feature.title}</h3>
-                  <p className="text-slate-300 leading-relaxed">{feature.description}</p>
-                </div>
+                ))}
               </div>
-            ))}
+              <div className="mt-8 pt-6 border-t-2 border-red-200">
+                <p className="text-3xl font-black text-red-600">~4 SAAT</p>
+                <p className="text-sm text-slate-600">+ Texniki komandadan asılılıq</p>
+              </div>
+            </div>
+
+            {/* After */}
+            <div className="bg-white border-2 border-green-300 rounded-3xl p-8 shadow-xl">
+              <div className="bg-green-100 p-3 rounded-xl inline-block mb-6">
+                <Check className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">İNDİ</h3>
+              <p className="text-slate-600 mb-8">QueryBank AI ilə (tam müstəqil)</p>
+              <div className="space-y-4">
+                {beforeAfter.after.map((step, idx) => (
+                  <div key={idx} className="flex items-start space-x-4">
+                    <div className="bg-green-100 text-green-600 rounded-lg px-3 py-1 text-sm font-bold whitespace-nowrap">
+                      {step.time}
+                    </div>
+                    <p className="text-slate-700 flex-1">{step.task}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 pt-6 border-t-2 border-green-300">
+                <p className="text-3xl font-black text-green-600">8 SANİYƏ</p>
+                <p className="text-sm text-slate-600">Tam müstəqil, real-time</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Use Cases Section */}
-      <div className="relative py-24 bg-gradient-to-b from-slate-900 to-slate-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <div className="inline-block bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-2 mb-6">
-              <span className="text-sm text-purple-400 font-semibold">USE CASES</span>
-            </div>
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-6">
-              Nə Edə Bilərsiniz?
-            </h2>
-            <p className="text-xl text-slate-400 max-w-3xl mx-auto">
-              Real business scenarios. Instant insights. Actionable data.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {useCases.map((useCase, idx) => (
-              <div
-                key={idx}
-                className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all"
-              >
-                <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 p-4 rounded-2xl inline-block mb-6">
-                  <useCase.icon className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-6">{useCase.title}</h3>
-                <ul className="space-y-3">
-                  {useCase.items.map((item, i) => (
-                    <li key={i} className="flex items-start space-x-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-slate-300 text-sm leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Testimonials Section */}
-      <div className="relative py-24 bg-slate-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <div className="inline-block bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-2 mb-6">
-              <span className="text-sm text-yellow-400 font-semibold">IMPACT</span>
-            </div>
-            <h2 className="text-4xl sm:text-5xl font-black text-white mb-6">
-              Real Results, Real Impact
+      {/* Key Benefits */}
+      <div className="relative py-24 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-6">
+              Nəyə Görə QueryBank AI?
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, idx) => (
+          <div className="space-y-6">
+            {[
+              { icon: Brain, title: 'Azərbaycan dilində AI', desc: 'Təbii dildə suallar verin, AI SQL yaradır' },
+              { icon: Zap, title: '91.5% daha sürətli', desc: 'Prompt optimizasiyası ilə saniyələrdə cavab' },
+              { icon: Shield, title: 'Bank səviyyəsində təhlükəsizlik', desc: 'JWT, bcrypt, SQL injection qorunması' },
+              { icon: Activity, title: 'Real-time məlumat', desc: 'Canlı PostgreSQL bağlantısı, köhnə data yoxdur' },
+              { icon: PieChart, title: '15+ hazır analitika', desc: 'Risk, müştəri, kredit analizi bir paneldə' },
+              { icon: Terminal, title: 'SQL konsolu power users üçün', desc: 'Təcrübəli istifadəçilər üçün birbaşa SQL interfeysi' },
+            ].map((benefit, idx) => (
               <div
                 key={idx}
-                className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 hover:border-yellow-500/30 transition-all"
+                className="flex items-start space-x-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 hover:shadow-lg transition-all"
               >
-                <div className="flex space-x-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                  ))}
+                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-4 rounded-2xl flex-shrink-0">
+                  <benefit.icon className="h-8 w-8 text-white" />
                 </div>
-                <p className="text-slate-200 text-lg mb-6 leading-relaxed italic">
-                  "{testimonial.quote}"
-                </p>
                 <div>
-                  <div className="font-bold text-white">{testimonial.author}</div>
-                  <div className="text-sm text-slate-400">{testimonial.role}</div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{benefit.title}</h3>
+                  <p className="text-slate-600">{benefit.desc}</p>
                 </div>
               </div>
             ))}
@@ -370,37 +427,44 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Final CTA Section */}
-      <div className="relative py-32 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:60px_60px]" />
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      {/* Final CTA */}
+      <div className="relative py-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600">
+        <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-6">
-            Gələcək Hazırdır.
-            <br />
-            Siz Hazırsınız?
+            SQL Öyrənməyə Ehtiyac Yoxdur
           </h2>
           <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto leading-relaxed">
-            QueryBank AI ilə bank analitikasında yeni səviyyəyə keçin.
-            Demo hesabla 2 dəqiqədə başlayın.
+            Sadəcə sualınızı verin, AI qalanını edir.
+            <br />
+            Demo hesabla 2 dəqiqədə başlayın. Qeydiyyat tələb olunmur.
           </p>
-          <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-            <button
-              onClick={() => router.push('/login')}
-              className="group px-12 py-6 bg-white text-blue-600 rounded-2xl hover:bg-blue-50 transition-all font-black text-xl shadow-2xl hover:scale-105 inline-flex items-center space-x-3"
-            >
-              <span>İndi Başlayın</span>
-              <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
-            </button>
-            <div className="text-white/80 text-sm">
-              ✓ Credit card tələb olunmur  ✓ Instant access  ✓ Full features
+          <button
+            onClick={() => router.push('/login')}
+            className="group px-16 py-6 bg-white text-blue-600 rounded-2xl hover:bg-blue-50 transition-all font-black text-2xl shadow-2xl hover:scale-105 inline-flex items-center space-x-4"
+          >
+            <span>İndi Başlayın</span>
+            <ArrowRight className="h-8 w-8 group-hover:translate-x-2 transition-transform" />
+          </button>
+          <div className="mt-8 flex items-center justify-center space-x-6 text-white/90 text-sm">
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="h-5 w-5" />
+              <span>Kredit kartı tələb olunmur</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="h-5 w-5" />
+              <span>Dərhal çıxış</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="h-5 w-5" />
+              <span>Bütün funksiyalar</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="bg-slate-950 border-t border-white/5 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-6 md:space-y-0">
             <div className="flex items-center space-x-3">
               <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-xl">
@@ -408,15 +472,15 @@ export default function LandingPage() {
               </div>
               <div>
                 <span className="text-white font-bold text-lg">QueryBank AI</span>
-                <p className="text-xs text-slate-500">Enterprise Banking Analytics</p>
+                <p className="text-xs text-slate-400">SQL Bilməyə Ehtiyac Yoxdur</p>
               </div>
             </div>
-            <div className="text-slate-500 text-sm">
-              © 2025 QueryBank AI. All rights reserved.
+            <div className="text-slate-400 text-sm">
+              © 2025 QueryBank AI. Bütün hüquqlar qorunur.
             </div>
             <div className="flex items-center space-x-3">
               <Award className="h-5 w-5 text-yellow-400" />
-              <span className="text-slate-400 text-sm">Powered by <span className="text-blue-400 font-semibold">Google Gemini 2.5 Flash</span></span>
+              <span className="text-slate-400 text-sm">Powered by <span className="text-blue-400 font-semibold">Google Gemini 2.5</span></span>
             </div>
           </div>
         </div>
