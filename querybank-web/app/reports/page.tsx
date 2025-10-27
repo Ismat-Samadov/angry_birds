@@ -2,7 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { TrendingUp, Users, DollarSign, FileText, BarChart3, MessageSquare, LogOut } from 'lucide-react';
+import {
+  TrendingUp,
+  Users,
+  DollarSign,
+  FileText,
+  BarChart3,
+  MessageSquare,
+  LogOut,
+  TrendingDown,
+  AlertCircle,
+  Award,
+  Activity,
+} from 'lucide-react';
 import DataChart from '@/components/DataChart';
 import StatsCard from '@/components/StatsCard';
 
@@ -13,112 +25,76 @@ interface Stats {
   totalDeposits: number;
 }
 
-interface ChartData {
-  title: string;
-  data: any[];
-  chartType: 'bar' | 'line' | 'pie';
-  config: any;
+interface AnalyticsData {
+  loansByType: any[];
+  customersByAccountType: any[];
+  creditScoreDistribution: any[];
+  topCustomers: any[];
+  transactionTrends: any[];
+  loanStatusDistribution: any[];
+  customerStatusDistribution: any[];
+  highValueCustomers: any;
+  customersWithLoans: any[];
+  recentLargeTransactions: any[];
 }
 
 export default function ReportsPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [charts, setCharts] = useState<ChartData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [customQuery, setCustomQuery] = useState('');
-  const [customResult, setCustomResult] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
-    fetchStats();
-    fetchPredefinedReports();
+    fetchAllData();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchAllData = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('/api/stats');
-      const data = await response.json();
-      setStats(data);
+      // Fetch stats
+      const statsRes = await fetch('/api/stats');
+      const statsData = await statsRes.json();
+      setStats(statsData);
+
+      // Fetch analytics
+      const analyticsRes = await fetch('/api/analytics');
+      const analyticsData = await analyticsRes.json();
+      if (analyticsData.success) {
+        setAnalytics(analyticsData.data);
+      }
     } catch (error) {
-      console.error('Stats fetch error:', error);
-    }
-  };
-
-  const fetchPredefinedReports = async () => {
-    setLoading(true);
-    const queries = [
-      { title: 'Kredit Növlərinə Görə Balans', question: 'Kredit növlərinə görə ümumi kredit balansını göstər' },
-      { title: 'Hesab Növlərinə Görə Orta Kredit Reytinqi', question: 'Hesab növlərinə görə orta kredit reytinqi göstər' },
-      { title: 'Ən Yüksək Balansa Malik Müştərilər', question: 'Ən yüksək balansa malik 5 müştərini göstər' },
-    ];
-
-    const chartResults: ChartData[] = [];
-
-    for (const query of queries) {
-      try {
-        const response = await fetch('/api/query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: query.question }),
-        });
-
-        const result = await response.json();
-
-        if (result.success && result.data && result.queryInfo.needs_chart) {
-          chartResults.push({
-            title: query.title,
-            data: result.data,
-            chartType: result.queryInfo.chart_type,
-            config: result.queryInfo.chart_config,
-          });
-        }
-      } catch (error) {
-        console.error(`Error fetching ${query.title}:`, error);
-      }
-    }
-
-    setCharts(chartResults);
-    setLoading(false);
-  };
-
-  const handleCustomQuery = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customQuery.trim()) return;
-
-    setLoading(true);
-    setCustomResult(null);
-
-    try {
-      const response = await fetch('/api/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: customQuery }),
-      });
-
-      const result = await response.json();
-
-      if (result.error) {
-        setCustomResult({ error: result.error });
-      } else {
-        setCustomResult(result);
-      }
-    } catch (error: any) {
-      setCustomResult({ error: error.message });
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const demoQueries = [
-    'Aktiv kredit statuslu müştərilərin sayı',
-    'Orta müştəri balansı nədir?',
-    'Ən böyük kredit məbləği',
-    'Hesab növlərinə görə müştəri sayı',
-  ];
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.push('/login');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="flex space-x-2 justify-center mb-4">
+            <div className="w-4 h-4 bg-blue-500 rounded-full animate-bounce"></div>
+            <div className="w-4 h-4 bg-blue-500 rounded-full animate-bounce delay-100"></div>
+            <div className="w-4 h-4 bg-blue-500 rounded-full animate-bounce delay-200"></div>
+          </div>
+          <p className="text-slate-600 font-medium">Analitika yüklənir...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -133,9 +109,9 @@ export default function ReportsPage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    Hesabatlar və Analitika
+                    Analitika Paneli
                   </h1>
-                  <p className="text-sm text-slate-600">Ətraflı məlumat analizi</p>
+                  <p className="text-sm text-slate-600">Məlumat təhlili və hesabatlar</p>
                 </div>
               </div>
               <nav className="flex space-x-2">
@@ -146,10 +122,9 @@ export default function ReportsPage() {
                   <MessageSquare className="h-4 w-4" />
                   <span>AI Çat</span>
                 </button>
-                <button
-                  className="px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg font-medium"
-                >
-                  <span>Hesabatlar</span>
+                <button className="px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg font-medium flex items-center space-x-2">
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Analitika</span>
                 </button>
               </nav>
             </div>
@@ -160,12 +135,7 @@ export default function ReportsPage() {
                 </span>
               )}
               <button
-                onClick={async () => {
-                  await fetch('/api/auth/logout', { method: 'POST' });
-                  localStorage.removeItem('token');
-                  localStorage.removeItem('user');
-                  router.push('/login');
-                }}
+                onClick={handleLogout}
                 className="text-sm text-slate-600 hover:text-slate-900 flex items-center space-x-1"
               >
                 <LogOut className="h-4 w-4" />
@@ -176,10 +146,10 @@ export default function ReportsPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Stats Dashboard */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Key Metrics */}
         {stats && (
-          <div className="mb-6">
+          <div>
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Əsas Göstəricilər</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatsCard
@@ -218,154 +188,238 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {/* Predefined Charts */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Avtomatik Hesabatlar</h2>
-          {loading && charts.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center">
-              <div className="flex space-x-2 justify-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce delay-100"></div>
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce delay-200"></div>
+        {/* High-Value Customer Insight */}
+        {analytics?.highValueCustomers && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
+            <div className="flex items-start space-x-4">
+              <div className="bg-amber-100 p-3 rounded-lg">
+                <Award className="h-6 w-6 text-amber-600" />
               </div>
-              <p className="text-slate-600 mt-3">Hesabatlar yüklənir...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {charts.map((chart, idx) => (
-                <div key={idx} className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-                  <h3 className="text-md font-semibold text-slate-900 mb-4">{chart.title}</h3>
-                  <div className="h-80">
-                    <DataChart
-                      data={chart.data}
-                      chartType={chart.chartType}
-                      config={chart.config}
-                    />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-slate-900 mb-1">Yüksək Dəyərli Müştərilər</h3>
+                <p className="text-sm text-slate-600 mb-3">
+                  50,000 ₼-dən çox balansa malik müştərilər
+                </p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-slate-600">Müştəri Sayı</p>
+                    <p className="text-2xl font-bold text-slate-900">{analytics.highValueCustomers.count}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-600">Ümumi Balans</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {(analytics.highValueCustomers.total_balance / 1000).toFixed(0)}K ₼
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-600">Orta Kredit Reytinqi</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {Math.round(analytics.highValueCustomers.avg_credit_score)}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Custom Query Section */}
-        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Xüsusi Sorğu</h2>
-          <p className="text-sm text-slate-600 mb-4">
-            Verilənlər bazasından məlumat əldə etmək üçün təbii dildə sual yazın
-          </p>
-
-          {/* Demo Queries */}
-          <div className="mb-4">
-            <p className="text-xs text-slate-600 mb-2">Nümunə sorğular:</p>
-            <div className="flex flex-wrap gap-2">
-              {demoQueries.map((query, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCustomQuery(query)}
-                  className="text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-full hover:border-blue-300 hover:bg-blue-50 transition text-slate-700"
-                >
-                  {query}
-                </button>
-              ))}
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Query Form */}
-          <form onSubmit={handleCustomQuery} className="mb-6">
-            <div className="flex space-x-3">
-              <input
-                type="text"
-                value={customQuery}
-                onChange={(e) => setCustomQuery(e.target.value)}
-                placeholder="Sorğunuzu daxil edin..."
-                className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-                disabled={loading}
-              />
-              <button
-                type="submit"
-                disabled={loading || !customQuery.trim()}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
-              >
-                {loading ? 'Yüklənir...' : 'Sorğula'}
-              </button>
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Loans by Type */}
+          {analytics?.loansByType && analytics.loansByType.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+              <h3 className="text-md font-semibold text-slate-900 mb-4">Kredit Növlərinə Görə Bölgü</h3>
+              <div className="h-80">
+                <DataChart
+                  data={analytics.loansByType}
+                  chartType="bar"
+                  config={{
+                    x_column: 'loan_type',
+                    y_column: 'total_balance',
+                    title: 'Kredit Növlərinə Görə Ümumi Balans',
+                    xlabel: 'Kredit Növü',
+                    ylabel: 'Ümumi Balans (₼)',
+                  }}
+                />
+              </div>
+              <div className="mt-4 text-xs text-slate-600">
+                <p><strong>İnsiyt:</strong> {analytics.loansByType[0]?.loan_type} kreditləri ən yüksək balansa malikdir.</p>
+              </div>
             </div>
-          </form>
+          )}
 
-          {/* Custom Query Results */}
-          {customResult && (
-            <div className="border-t border-slate-200 pt-6">
-              {customResult.error ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-                  <p className="font-semibold">Xəta:</p>
-                  <p className="text-sm">{customResult.error}</p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm text-slate-700 mb-4">{customResult.queryInfo?.explanation}</p>
+          {/* Credit Score Distribution */}
+          {analytics?.creditScoreDistribution && analytics.creditScoreDistribution.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+              <h3 className="text-md font-semibold text-slate-900 mb-4">Kredit Reytinqi Bölgüsü</h3>
+              <div className="h-80">
+                <DataChart
+                  data={analytics.creditScoreDistribution}
+                  chartType="pie"
+                  config={{
+                    x_column: 'score_range',
+                    y_column: 'customer_count',
+                    title: 'Müştərilərin Kredit Reytinqi Bölgüsü',
+                    xlabel: 'Reytinq Aralığı',
+                    ylabel: 'Müştəri Sayı',
+                  }}
+                />
+              </div>
+              <div className="mt-4 text-xs text-slate-600">
+                <p><strong>İnsiyt:</strong> Müştərilərin əksəriyyəti yaxşı kredit reytinqinə malikdir.</p>
+              </div>
+            </div>
+          )}
 
-                  {/* Data Table */}
-                  {customResult.data && customResult.data.length > 0 && (
-                    <div className="overflow-x-auto mb-4">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-50">
-                          <tr>
-                            {Object.keys(customResult.data[0]).map((key) => (
-                              <th
-                                key={key}
-                                className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase"
-                              >
-                                {key}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
-                          {customResult.data.map((row: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-50">
-                              {Object.values(row).map((value: any, i) => (
-                                <td key={i} className="px-4 py-3 whitespace-nowrap text-slate-900">
-                                  {typeof value === 'number' && value > 1000
-                                    ? value.toLocaleString()
-                                    : String(value)}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+          {/* Customers by Account Type */}
+          {analytics?.customersByAccountType && analytics.customersByAccountType.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+              <h3 className="text-md font-semibold text-slate-900 mb-4">Hesab Növlərinə Görə Müştərilər</h3>
+              <div className="h-80">
+                <DataChart
+                  data={analytics.customersByAccountType}
+                  chartType="bar"
+                  config={{
+                    x_column: 'account_type',
+                    y_column: 'customer_count',
+                    title: 'Hesab Növlərinə Görə Müştəri Sayı',
+                    xlabel: 'Hesab Növü',
+                    ylabel: 'Müştəri Sayı',
+                  }}
+                />
+              </div>
+              <div className="mt-4 text-xs text-slate-600">
+                <p><strong>İnsiyt:</strong> {analytics.customersByAccountType[0]?.account_type} hesabları ən populyardır.</p>
+              </div>
+            </div>
+          )}
 
-                  {/* Chart */}
-                  {customResult.queryInfo?.needs_chart && customResult.data && (
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <div className="h-80">
-                        <DataChart
-                          data={customResult.data}
-                          chartType={customResult.queryInfo.chart_type}
-                          config={customResult.queryInfo.chart_config}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SQL Query */}
-                  {customResult.queryInfo?.query && (
-                    <details className="mt-4">
-                      <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-700">
-                        SQL Sorğusu
-                      </summary>
-                      <pre className="mt-2 text-xs bg-slate-800 text-slate-100 p-3 rounded-lg overflow-x-auto">
-                        {customResult.queryInfo.query}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-              )}
+          {/* Loan Status Distribution */}
+          {analytics?.loanStatusDistribution && analytics.loanStatusDistribution.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+              <h3 className="text-md font-semibold text-slate-900 mb-4">Kredit Status Bölgüsü</h3>
+              <div className="h-80">
+                <DataChart
+                  data={analytics.loanStatusDistribution}
+                  chartType="pie"
+                  config={{
+                    x_column: 'loan_status',
+                    y_column: 'count',
+                    title: 'Kredit Statuslarının Paylanması',
+                    xlabel: 'Status',
+                    ylabel: 'Sayı',
+                  }}
+                />
+              </div>
+              <div className="mt-4 text-xs text-slate-600">
+                <p><strong>İnsiyt:</strong> Kreditlərin əksəriyyəti aktiv statusdadır.</p>
+              </div>
             </div>
           )}
         </div>
+
+        {/* Top Customers Table */}
+        {analytics?.topCustomers && analytics.topCustomers.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+            <h3 className="text-md font-semibold text-slate-900 mb-4">Ən Yüksək Balansa Malik Müştərilər (Top 10)</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Müştəri</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Hesab Növü</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase">Balans</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase">Kredit Reytinqi</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {analytics.topCustomers.map((customer, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
+                        {customer.customer_name}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                        {customer.account_type}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right font-semibold text-slate-900">
+                        {customer.account_balance.toLocaleString()} ₼
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-slate-700">
+                        {customer.credit_score}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Large Transactions */}
+        {analytics?.recentLargeTransactions && analytics.recentLargeTransactions.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+            <h3 className="text-md font-semibold text-slate-900 mb-4">Son Böyük Əməliyyatlar (5,000 ₼+)</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Tarix</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Müştəri</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Növ</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase">Məbləğ</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {analytics.recentLargeTransactions.map((transaction, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                        {new Date(transaction.transaction_date).toLocaleDateString('az-AZ')}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-900">
+                        {transaction.customer_name}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          transaction.transaction_type === 'deposit'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {transaction.transaction_type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right font-semibold text-slate-900">
+                        {transaction.amount.toLocaleString()} ₼
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Customers with Loans by Account Type */}
+        {analytics?.customersWithLoans && analytics.customersWithLoans.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+            <h3 className="text-md font-semibold text-slate-900 mb-4">Hesab Növünə Görə Kreditli Müştərilər</h3>
+            <div className="h-80">
+              <DataChart
+                data={analytics.customersWithLoans}
+                chartType="bar"
+                config={{
+                  x_column: 'account_type',
+                  y_column: 'total_loan_balance',
+                  title: 'Hesab Növünə Görə Kredit Balansları',
+                  xlabel: 'Hesab Növü',
+                  ylabel: 'Ümumi Kredit Balansı (₼)',
+                }}
+              />
+            </div>
+            <div className="mt-4 text-xs text-slate-600">
+              <p><strong>İnsiyt:</strong> {analytics.customersWithLoans[0]?.account_type} hesablarında ən çox kredit balansı var.</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

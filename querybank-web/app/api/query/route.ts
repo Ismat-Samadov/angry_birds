@@ -138,14 +138,14 @@ export async function POST(request: NextRequest) {
       if (selectStatement) {
         // Prepend schema name to tables if needed
         const modifiedQuery = selectStatement.replace(
-          /FROM\s+(\w+)/gi,
+          /FROM\s+([\w.]+)/gi,
           (match, table) => {
             // Don't modify if already schema-qualified
             if (table.includes('.')) return match;
             return `FROM demo_bank.${table}`;
           }
         ).replace(
-          /JOIN\s+(\w+)/gi,
+          /JOIN\s+([\w.]+)/gi,
           (match, table) => {
             if (table.includes('.')) return match;
             return `JOIN demo_bank.${table}`;
