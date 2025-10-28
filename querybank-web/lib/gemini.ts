@@ -171,6 +171,27 @@ IMPORTANT REMINDER: You MUST return ONLY valid JSON. Do NOT include any explanat
     const response = await result.response;
     const text = response.text();
 
+    // Check if response is empty
+    if (!text || text.trim().length === 0) {
+      console.error('AI returned empty response!');
+      console.error('Result:', JSON.stringify(result, null, 2));
+      console.error('Response candidates:', response.candidates);
+
+      // Check for safety blocks or other issues
+      if (response.candidates && response.candidates.length > 0) {
+        const candidate = response.candidates[0];
+        console.error('Candidate:', JSON.stringify(candidate, null, 2));
+      }
+
+      // Return a helpful error instead of retrying with empty response
+      return {
+        query: 'ERROR',
+        needs_chart: false,
+        chart_type: null,
+        explanation: 'AI xidməti cavab vermədi. Zəhmət olmasa bir az sonra yenidən cəhd edin və ya sualınızı sadələşdirin.'
+      };
+    }
+
     console.log('AI Response:', text.substring(0, 300)); // Debug
 
     // Extract JSON from response - try multiple patterns
