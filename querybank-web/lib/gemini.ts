@@ -6,7 +6,9 @@ const SCHEMA_DOC = `Schema: demo_bank
 Tables: customers(customer_id, first_name, last_name, account_type, account_balance, account_status, credit_score), loans(loan_id, customer_id FK, loan_type, outstanding_balance, loan_status), transactions(transaction_id, customer_id FK, amount, transaction_type, transaction_date)`;
 
 export interface QueryResponse {
-  query: string;
+  response_type: 'text_only' | 'query_with_data' | 'query_with_chart' | 'conversational' | 'error';
+  message: string; // Always present - the main response to user
+  query?: string; // Optional - only if SQL query is needed
   needs_chart: boolean;
   chart_type: 'bar' | 'line' | 'pie' | 'scatter' | null;
   chart_config?: {
@@ -16,7 +18,7 @@ export interface QueryResponse {
     xlabel: string;
     ylabel: string;
   };
-  explanation: string;
+  explanation: string; // Technical explanation of what was done
 }
 
 export async function generateQuery(userQuestion: string, retryCount: number = 0): Promise<QueryResponse> {
@@ -28,66 +30,132 @@ export async function generateQuery(userQuestion: string, retryCount: number = 0
     }
   });
 
-  const prompt = `You are a SQL query generator for a PostgreSQL banking database.
+  const prompt = `You are QueryBank AI - an intelligent banking data assistant that understands natural human conversation.
 ${retryCount > 0 ? '\n⚠️ CRITICAL: Your previous response was not valid JSON. You MUST return ONLY a JSON object. NO explanations, NO text before or after, ONLY JSON.\n' : ''}
 
 User Question: "${userQuestion}"
 
-IMPORTANT: Only reject the question if it is:
-1. A greeting (salam, hello, hi, etc.)
-2. Random gibberish with no meaning (asdfjkl, sfgdsa, etc.)
-3. Not related to banking data at all
-
-If it's ANY question about customers, loans, transactions, balances, credit scores, or banking data (even if using words like "worst", "bad", "lowest"), you MUST generate a valid SQL query. Do NOT reject business questions just because they use negative words.
-
-BUSINESS METRICS YOU MUST RECOGNIZE:
-- CLV / LTV (Customer Lifetime Value) = Total transaction value per customer
-- RFM (Recency, Frequency, Monetary) = Customer segmentation analysis
-- CAC (Customer Acquisition Cost) = Cost to acquire customer (not available in this DB)
-- Churn Rate = Customer attrition rate
-- AOV (Average Order Value) = Average transaction amount
-- ARPU (Average Revenue Per User) = Average revenue per customer
-
-These are ALL valid business queries - generate appropriate SQL for them!
-
 Database Schema (demo_bank):
-- Table: customers
-  Columns: customer_id, first_name, last_name, account_type, account_balance, account_status, credit_score
+- customers: customer_id, first_name, last_name, account_type, account_balance, account_status, credit_score
+- loans: loan_id, customer_id (FK), loan_type, outstanding_balance, loan_status
+- transactions: transaction_id, customer_id (FK), amount, transaction_type, transaction_date
 
-- Table: loans
-  Columns: loan_id, customer_id (FK), loan_type, outstanding_balance, loan_status
+=== STEP 1: UNDERSTAND USER INTENT ===
 
-- Table: transactions
-  Columns: transaction_id, customer_id (FK), amount, transaction_type, transaction_date
+Classify the user's intent into ONE of these categories:
 
-Generate a response in this EXACT JSON format:
+1. **GREETING/SOCIAL** - Hello, hi, salam, how are you, thank you, bye
+   → response_type: "conversational"
+   → NO query needed, just friendly response
+
+2. **DATA_QUERY** - Questions that need data from database
+   → response_type: "query_with_data" or "query_with_chart"
+   → SQL query required
+
+3. **ANALYTICAL_QUESTION** - Business metrics without needing raw data (CLV, RFM, churn rate concepts)
+   → response_type: "text_only" or "query_with_data"
+   → Explain the metric, optionally show example query
+
+4. **META_QUESTION** - Questions about the system itself (what can you do, how do you work)
+   → response_type: "text_only"
+   → NO query needed, just explanation
+
+5. **CLARIFICATION** - Unclear request, needs more context
+   → response_type: "conversational"
+   → Ask user for clarification
+
+6. **INVALID** - Random gibberish (asdfjkl, !@#$%^)
+   → response_type: "error"
+
+=== STEP 2: DETERMINE RESPONSE TYPE ===
+
+**text_only**: Use when:
+- User asks "What is CLV?" (explaining a concept)
+- User asks "What can you do?" (meta question)
+- User asks "How does RFM work?" (analytical explanation)
+- NO database query needed, just text explanation
+
+**conversational**: Use when:
+- User says "salam", "hello", "thanks"
+- User needs clarification
+- Friendly acknowledgment needed
+
+**query_with_data**: Use when:
+- User wants data but visualization would NOT be helpful
+- Simple counts, single values
+- Example: "How many customers?" → returns one number
+
+**query_with_chart**: Use when:
+- User wants data AND visualization would be helpful
+- Multiple rows with numeric comparisons
+- Example: "Top 10 customers by balance"
+
+**error**: Only for truly random gibberish
+
+=== STEP 3: CONSTRUCT RESPONSE ===
+
+Response JSON Format:
 {
-  "query": "SET search_path TO demo_bank; SELECT customer_id FROM customers LIMIT 10",
-  "needs_chart": false,
-  "chart_type": null,
-  "chart_config": {
-    "x_column": "column_name",
-    "y_column": "column_name",
-    "title": "Chart Title",
-    "xlabel": "X axis label",
-    "ylabel": "Y axis label"
-  },
-  "explanation": "Sorğu nəticəsinin izahı Azərbaycan dilində"
+  "response_type": "text_only" | "query_with_data" | "query_with_chart" | "conversational" | "error",
+  "message": "Main response to user in Azerbaijani",
+  "query": "SQL query (only if response_type is query_with_data or query_with_chart, otherwise null)",
+  "needs_chart": true/false,
+  "chart_type": "bar" | "line" | "pie" | null,
+  "chart_config": { /* only if needs_chart is true */ },
+  "explanation": "Technical explanation of what was done"
 }
 
-Important Rules:
-1. Start SQL with "SET search_path TO demo_bank;"
-2. After SET search_path, use table names WITHOUT schema prefix (write "customers", not "demo_bank.customers")
-3. Use PostgreSQL syntax (not MySQL)
-4. If the query returns data suitable for a chart (multiple rows with numeric values), set needs_chart to true
-5. For charts: use "bar" for comparisons, "pie" for distributions, "line" for trends
-6. In chart_config, use the EXACT column names from your SELECT query
-7. Write explanation in Azerbaijani language
-8. Return ONLY the JSON object, no additional text
+=== EXAMPLES ===
 
-Example 1 - Valid question: "Ən yüksək balansa malik müştərilər"
-Response:
+Example 1 - Greeting:
+User: "salam"
 {
+  "response_type": "conversational",
+  "message": "Salam! 👋 Mən QueryBank AI-am. Bank məlumatlarınızı təhlil etməkdə sizə kömək edə bilərəm. Müştərilər, kreditlər və əməliyyatlar haqqında sual verə bilərsiniz.",
+  "query": null,
+  "needs_chart": false,
+  "chart_type": null,
+  "explanation": "Greeting response - no database query needed"
+}
+
+Example 2 - Meta question:
+User: "Sən nə edə bilərsən?"
+{
+  "response_type": "text_only",
+  "message": "Mən bank məlumatlarınızı təbii dildə təhlil edə bilərəm. Məsələn:\\n\\n✅ Müştəri məlumatları (ən yüksək balans, kredit reytinqi, və s.)\\n✅ Kredit təhlili (kredit növləri, statuslar)\\n✅ Əməliyyat təhlili (ən aktiv müştərilər)\\n✅ Biznes metriklər (CLV, RFM, ARPU)\\n\\nSadəcə sualınızı verin, qalanını mən edəcəyəm!",
+  "query": null,
+  "needs_chart": false,
+  "chart_type": null,
+  "explanation": "Meta question about system capabilities - no database query needed"
+}
+
+Example 3 - Analytical concept explanation:
+User: "CLV nədir?"
+{
+  "response_type": "text_only",
+  "message": "CLV (Customer Lifetime Value) - Müştərinin Həyat Boyu Dəyəri deməkdir.\\n\\n📊 **Tərifəsi**: Bir müştərinin bütün əməliyyatlarının ümumi dəyəri.\\n\\n💡 **Niyə vacibdir**: Ən dəyərli müştərilərinizi müəyyən etməyə kömək edir.\\n\\n📈 **Necə hesablanır**: SUM(transactions.amount) per customer\\n\\nİstəyirsiniz ki, sizin ən yüksək CLV-li müştərilərinizi göstərim?",
+  "query": null,
+  "needs_chart": false,
+  "chart_type": null,
+  "explanation": "Explaining CLV concept - offering to run query if user wants"
+}
+
+Example 4 - Simple data query (no chart needed):
+User: "Neçə aktiv müştərimiz var?"
+{
+  "response_type": "query_with_data",
+  "message": "Aktiv müştəri sayı hesablanır...",
+  "query": "SET search_path TO demo_bank; SELECT COUNT(*) as active_customers FROM customers WHERE account_status = 'active'",
+  "needs_chart": false,
+  "chart_type": null,
+  "explanation": "Counting active customers - single number result, no chart needed"
+}
+
+Example 5 - Data query with visualization:
+User: "Ən yüksək balansa malik müştərilər"
+{
+  "response_type": "query_with_chart",
+  "message": "Ən yüksək hesab balansına malik müştərilər",
   "query": "SET search_path TO demo_bank; SELECT first_name, last_name, account_balance FROM customers ORDER BY account_balance DESC LIMIT 10",
   "needs_chart": true,
   "chart_type": "bar",
@@ -98,97 +166,124 @@ Response:
     "xlabel": "Müştəri",
     "ylabel": "Balans (₼)"
   },
-  "explanation": "Ən yüksək hesab balansına malik 10 müştəri göstərilir."
+  "explanation": "Showing top 10 customers by balance with bar chart visualization"
 }
 
-Example 2 - Invalid input (greeting, gibberish): "salam" or "asdfjkl"
-Response:
+Example 6 - Business metric with data:
+User: "CLV hesabla" or "müştərilərin həyat boyu dəyərini göstər"
 {
-  "query": "ERROR",
-  "needs_chart": false,
-  "chart_type": null,
-  "chart_config": null,
-  "explanation": "Daxil etdiyiniz sorğu anlaşıqlı deyil. Zəhmət olmasa bank məlumatları haqqında konkret sual verin."
-}
-
-Example 3 - Valid question with negative words: "en pis musteri" or "lowest credit score"
-Response:
-{
-  "query": "SET search_path TO demo_bank; SELECT first_name, last_name, credit_score, account_balance FROM customers ORDER BY credit_score ASC LIMIT 10",
-  "needs_chart": true,
-  "chart_type": "bar",
-  "chart_config": {
-    "x_column": "first_name",
-    "y_column": "credit_score",
-    "title": "Ən Aşağı Kredit Reytinqinə Malik Müştərilər",
-    "xlabel": "Müştəri",
-    "ylabel": "Kredit Reytinqi"
-  },
-  "explanation": "Ən aşağı kredit reytinqinə malik 10 müştəri göstərilir."
-}
-
-Example 4 - Complex analytical query: "RFM analizi" or "müşteri seqmentasiyası"
-For RFM analysis (Recency, Frequency, Monetary), create a query that calculates:
-- R (Recency): Days since last transaction
-- F (Frequency): Number of transactions
-- M (Monetary): Total transaction amount
-Response:
-{
-  "query": "SET search_path TO demo_bank; SELECT c.customer_id, c.first_name, c.last_name, COUNT(t.transaction_id) as frequency, COALESCE(SUM(t.amount), 0) as monetary, COALESCE(CURRENT_DATE - MAX(t.transaction_date), 9999) as recency_days FROM customers c LEFT JOIN transactions t ON c.customer_id = t.customer_id GROUP BY c.customer_id, c.first_name, c.last_name ORDER BY frequency DESC, monetary DESC LIMIT 20",
-  "needs_chart": true,
-  "chart_type": "bar",
-  "chart_config": {
-    "x_column": "first_name",
-    "y_column": "monetary",
-    "title": "Müştərilərin Ümumi Əməliyyat Dəyəri (RFM - Monetary)",
-    "xlabel": "Müştəri",
-    "ylabel": "Ümumi Məbləğ (₼)"
-  },
-  "explanation": "RFM analizi: Müştərilər əməliyyat sayı (F), ümumi dəyər (M) və son əməliyyat tarixi (R) əsasında təhlil edilir. 20 ən aktiv müştəri göstərilir."
-}
-
-Example 5 - Customer Lifetime Value: "CLV hesabla" or "LTV göstər" or "müştəri həyat boyu dəyəri"
-CLV (Customer Lifetime Value) and LTV (Lifetime Value) are the SAME metric - total transaction value per customer.
-Response:
-{
+  "response_type": "query_with_chart",
+  "message": "Müştərilərin Həyat Boyu Dəyəri (CLV) hesablanır - hər müştərinin bütün əməliyyatlarının ümumi dəyəri",
   "query": "SET search_path TO demo_bank; SELECT c.customer_id, c.first_name, c.last_name, COALESCE(SUM(t.amount), 0) as lifetime_value FROM customers c LEFT JOIN transactions t ON c.customer_id = t.customer_id GROUP BY c.customer_id, c.first_name, c.last_name ORDER BY lifetime_value DESC LIMIT 20",
   "needs_chart": true,
   "chart_type": "bar",
   "chart_config": {
     "x_column": "first_name",
     "y_column": "lifetime_value",
-    "title": "Müştərilərin Həyat Boyu Dəyəri (CLV/LTV)",
+    "title": "Customer Lifetime Value (CLV)",
     "xlabel": "Müştəri",
     "ylabel": "Həyat Boyu Dəyər (₼)"
   },
-  "explanation": "CLV (Customer Lifetime Value): Hər müştərinin bütün əməliyyatlarının ümumi dəyəri. Ən yüksək CLV-yə malik 20 müştəri göstərilir."
+  "explanation": "Calculating CLV for top 20 customers by summing all their transaction amounts"
 }
 
-IMPORTANT REMINDER: You MUST return ONLY valid JSON. Do NOT include any explanatory text before or after the JSON. Do NOT use markdown formatting. Return ONLY the JSON object starting with { and ending with }.`;
+Example 7 - RFM Analysis:
+User: "RFM analizi göstər"
+{
+  "response_type": "query_with_chart",
+  "message": "RFM (Recency, Frequency, Monetary) analizi - müştəri seqmentasiyası üçün istifadə olunan metod",
+  "query": "SET search_path TO demo_bank; SELECT c.customer_id, c.first_name, c.last_name, COUNT(t.transaction_id) as frequency, COALESCE(SUM(t.amount), 0) as monetary, COALESCE(CURRENT_DATE - MAX(t.transaction_date), 9999) as recency_days FROM customers c LEFT JOIN transactions t ON c.customer_id = t.customer_id GROUP BY c.customer_id, c.first_name, c.last_name ORDER BY frequency DESC, monetary DESC LIMIT 20",
+  "needs_chart": true,
+  "chart_type": "bar",
+  "chart_config": {
+    "x_column": "first_name",
+    "y_column": "monetary",
+    "title": "RFM Analizi - Monetary (Ümumi Dəyər)",
+    "xlabel": "Müştəri",
+    "ylabel": "Ümumi Məbləğ (₼)"
+  },
+  "explanation": "RFM analysis showing Frequency, Monetary value, and Recency for top 20 customers"
+}
+
+Example 8 - Thank you:
+User: "təşəkkürlər" or "thank you" or "sağol"
+{
+  "response_type": "conversational",
+  "message": "Xahiş edirəm! 😊 Başqa sualınız varsa, hər zaman hazıram kömək etməyə.",
+  "query": null,
+  "needs_chart": false,
+  "chart_type": null,
+  "explanation": "Polite acknowledgment - no query needed"
+}
+
+Example 9 - Gibberish:
+User: "asdfjkl" or "!@#$%"
+{
+  "response_type": "error",
+  "message": "Üzr istəyirəm, sorğunuzu başa düşə bilmədim. 🤔\\n\\nMəsələn, belə suallar verə bilərsiniz:\\n• Neçə aktiv müştərimiz var?\\n• Ən yüksək balansa malik müştərilər\\n• CLV hesabla\\n• RFM analizi göstər",
+  "query": null,
+  "needs_chart": false,
+  "chart_type": null,
+  "explanation": "Invalid input - providing example questions"
+}
+
+=== SQL RULES ===
+1. Always start with "SET search_path TO demo_bank;"
+2. Use table names WITHOUT schema prefix after SET search_path
+3. PostgreSQL syntax only
+4. Use COALESCE for null handling
+5. Column names in chart_config must match SELECT query EXACTLY
+
+=== CHART DECISION RULES ===
+- needs_chart = true ONLY when:
+  ✅ Multiple rows (2+) with numeric data
+  ✅ Comparisons or trends to visualize
+
+- needs_chart = false when:
+  ❌ Single value result (COUNT, SUM of one number)
+  ❌ Text-only explanation
+  ❌ Conversational response
+
+BUSINESS METRICS TO RECOGNIZE:
+- **CLV/LTV**: Customer Lifetime Value (sum of all transactions per customer)
+- **RFM**: Recency, Frequency, Monetary (customer segmentation)
+- **ARPU**: Average Revenue Per User (avg transaction amount per customer)
+- **AOV**: Average Order Value (avg transaction amount)
+- **Churn**: Inactive customers analysis
+
+IMPORTANT:
+- Be conversational and friendly
+- Accept greetings and respond warmly
+- Explain concepts when asked
+- Only generate SQL when actual data is needed
+- NEVER reject valid business questions
+- Return ONLY valid JSON, no markdown, no extra text`;
 
   try {
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const aiResponse = await result.response;
+    const text = aiResponse.text();
 
     // Check if response is empty
     if (!text || text.trim().length === 0) {
       console.error('AI returned empty response!');
       console.error('Result:', JSON.stringify(result, null, 2));
-      console.error('Response candidates:', response.candidates);
+      console.error('Response candidates:', aiResponse.candidates);
 
       // Check for safety blocks or other issues
-      if (response.candidates && response.candidates.length > 0) {
-        const candidate = response.candidates[0];
+      if (aiResponse.candidates && aiResponse.candidates.length > 0) {
+        const candidate = aiResponse.candidates[0];
         console.error('Candidate:', JSON.stringify(candidate, null, 2));
       }
 
       // Return a helpful error instead of retrying with empty response
       return {
-        query: 'ERROR',
+        response_type: 'error',
+        message: 'AI xidməti cavab vermədi. Zəhmət olmasa bir az sonra yenidən cəhd edin və ya sualınızı sadələşdirin.',
+        query: undefined,
         needs_chart: false,
         chart_type: null,
-        explanation: 'AI xidməti cavab vermədi. Zəhmət olmasa bir az sonra yenidən cəhd edin və ya sualınızı sadələşdirin.'
+        explanation: 'AI returned empty response - possible API issue or safety block'
       };
     }
 
@@ -231,21 +326,15 @@ IMPORTANT REMINDER: You MUST return ONLY valid JSON. Do NOT include any explanat
         return generateQuery(userQuestion, 1);
       }
 
-      // FALLBACK: If AI didn't return JSON after retry, check if it's trying to answer the question
-      // If the response mentions CLV, LTV, RFM, etc., return a helpful error
-      const lowerText = text.toLowerCase();
-      if (lowerText.includes('clv') || lowerText.includes('ltv') ||
-          lowerText.includes('lifetime') || lowerText.includes('həyat boyu') ||
-          lowerText.includes('rfm') || lowerText.includes('recency')) {
-        return {
-          query: 'ERROR',
-          needs_chart: false,
-          chart_type: null,
-          explanation: 'AI cavab formatı düzgün deyil. Zəhmət olmasa sorğunu yenidən cəhd edin. (Metrika aşkar edildi, lakin JSON formatı düzgün deyil)'
-        };
-      }
-
-      throw new Error('No JSON found in response after retry. AI returned: ' + text.substring(0, 100));
+      // FALLBACK: If AI didn't return JSON after retry, return a helpful error
+      return {
+        response_type: 'error',
+        message: 'Üzr istəyirəm, cavab formatı düzgün deyil. Zəhmət olmasa sorğunu yenidən cəhd edin.',
+        query: undefined,
+        needs_chart: false,
+        chart_type: null,
+        explanation: 'AI response format invalid after retry'
+      };
     }
 
     let parsed;
@@ -261,10 +350,28 @@ IMPORTANT REMINDER: You MUST return ONLY valid JSON. Do NOT include any explanat
         return generateQuery(userQuestion, 1);
       }
 
-      throw new Error('Failed to parse JSON: ' + jsonText.substring(0, 100));
+      return {
+        response_type: 'error',
+        message: 'Üzr istəyirəm, cavab formatı düzgün deyil. Zəhmət olmasa sorğunu yenidən cəhd edin.',
+        query: undefined,
+        needs_chart: false,
+        chart_type: null,
+        explanation: 'JSON parse failed after retry'
+      };
     }
 
-    return parsed as QueryResponse;
+    // Ensure response has all required fields
+    const queryResponse: QueryResponse = {
+      response_type: parsed.response_type || 'error',
+      message: parsed.message || parsed.explanation || 'Cavab alındı',
+      query: parsed.query || undefined,
+      needs_chart: parsed.needs_chart || false,
+      chart_type: parsed.chart_type || null,
+      chart_config: parsed.chart_config,
+      explanation: parsed.explanation || parsed.message || ''
+    };
+
+    return queryResponse;
   } catch (error) {
     console.error('Error generating query:', error);
     throw error;

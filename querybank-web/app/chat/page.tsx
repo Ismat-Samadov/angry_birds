@@ -24,7 +24,7 @@ export default function ChatPage() {
     {
       id: '1',
       type: 'assistant',
-      content: 'Salam! 👋 Mən QueryBank AI köməkçisiyəm. Bank məlumatlarınızı təbii dildə təhlil etməyə hazıram. Müştərilər, kreditlər və əməliyyatlar haqqında istənilən sual verə bilərsiniz.',
+      content: 'Salam! 👋 Mən QueryBank AI-am. Bank məlumatlarınızı təbii dildə təhlil edə bilərəm.\n\nMüştərilər, kreditlər və əməliyyatlar haqqında sual verə bilərsiniz. Həmçinin CLV, RFM kimi biznes metrikləri haqqında da məlumat əldə edə bilərsiniz.\n\nSadəcə sualınızı verin, qalanını mən edəcəyəm! 🚀',
     },
   ]);
   const [input, setInput] = useState('');
@@ -76,11 +76,14 @@ export default function ChatPage() {
         return;
       }
 
+      // Use message if available (for conversational/text_only), otherwise fall back to explanation
+      const displayContent = result.queryInfo.message || result.queryInfo.explanation;
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: result.queryInfo.explanation,
-        data: result.data,
+        content: displayContent,
+        data: result.data || [],
         chartConfig: result.queryInfo.chart_config,
         chartType: result.queryInfo.needs_chart ? result.queryInfo.chart_type : null,
         query: result.queryInfo.query,
@@ -103,11 +106,11 @@ export default function ChatPage() {
 
   const exampleQuestions = [
     { icon: '👥', text: 'Neçə aktiv müştərimiz var?', color: 'from-blue-500 to-cyan-500' },
-    { icon: '💰', text: 'Kredit növlərinə görə ümumi kredit balansını göstər', color: 'from-purple-500 to-pink-500' },
-    { icon: '⭐', text: 'Ən yüksək balansa malik 5 müştərini göstər', color: 'from-yellow-500 to-orange-500' },
-    { icon: '📊', text: 'Hesab növlərinə görə orta kredit reytinqi göstər', color: 'from-green-500 to-emerald-500' },
-    { icon: '📈', text: 'Kredit statuslarına görə müştəri sayını göstər', color: 'from-indigo-500 to-purple-500' },
-    { icon: '🔥', text: 'Ən çox əməliyyat edən müştəriləri göstər', color: 'from-red-500 to-orange-500' },
+    { icon: '⭐', text: 'Ən yüksək balansa malik müştərilər', color: 'from-yellow-500 to-orange-500' },
+    { icon: '📊', text: 'CLV nədir?', color: 'from-green-500 to-emerald-500' },
+    { icon: '🎯', text: 'RFM analizi göstər', color: 'from-indigo-500 to-purple-500' },
+    { icon: '💎', text: 'CLV hesabla', color: 'from-pink-500 to-rose-500' },
+    { icon: '❓', text: 'Sən nə edə bilərsən?', color: 'from-cyan-500 to-blue-500' },
   ];
 
   return (

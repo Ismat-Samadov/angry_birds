@@ -138,11 +138,35 @@ export async function POST(request: NextRequest) {
     // Generate SQL query using AI
     const queryInfo = await generateQuery(question);
 
-    // Check if AI determined this is an invalid/nonsensical question
-    if (queryInfo.query === 'ERROR' || queryInfo.query.includes('ERROR')) {
+    // Handle different response types
+    if (queryInfo.response_type === 'error') {
       return NextResponse.json(
-        { error: queryInfo.explanation || 'Daxil etdiyiniz sorğu anlaşıqlı deyil.' },
+        { error: queryInfo.message || 'Daxil etdiyiniz sorğu anlaşıqlı deyil.' },
         { status: 400 }
+      );
+    }
+
+    // Handle conversational and text-only responses (no database query needed)
+    if (queryInfo.response_type === 'conversational' || queryInfo.response_type === 'text_only') {
+      return NextResponse.json({
+        success: true,
+        response_type: queryInfo.response_type,
+        data: [],
+        queryInfo: {
+          query: null,
+          explanation: queryInfo.message,
+          needs_chart: false,
+          chart_type: null,
+          chart_config: null,
+        },
+      });
+    }
+
+    // For query_with_data and query_with_chart, we need to execute SQL
+    if (!queryInfo.query) {
+      return NextResponse.json(
+        { error: 'AI sorğu yarada bilmədi.' },
+        { status: 500 }
       );
     }
 
@@ -206,9 +230,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      response_type: queryInfo.response_type,
       data: data,
       queryInfo: {
         query: queryInfo.query,
+        message: queryInfo.message,
         explanation: queryInfo.explanation,
         needs_chart: shouldShowChart,
         chart_type: shouldShowChart ? validatedChartType : null,
