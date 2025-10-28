@@ -39,6 +39,16 @@ IMPORTANT: Only reject the question if it is:
 
 If it's ANY question about customers, loans, transactions, balances, credit scores, or banking data (even if using words like "worst", "bad", "lowest"), you MUST generate a valid SQL query. Do NOT reject business questions just because they use negative words.
 
+BUSINESS METRICS YOU MUST RECOGNIZE:
+- CLV / LTV (Customer Lifetime Value) = Total transaction value per customer
+- RFM (Recency, Frequency, Monetary) = Customer segmentation analysis
+- CAC (Customer Acquisition Cost) = Cost to acquire customer (not available in this DB)
+- Churn Rate = Customer attrition rate
+- AOV (Average Order Value) = Average transaction amount
+- ARPU (Average Revenue Per User) = Average revenue per customer
+
+These are ALL valid business queries - generate appropriate SQL for them!
+
 Database Schema (demo_bank):
 - Table: customers
   Columns: customer_id, first_name, last_name, account_type, account_balance, account_status, credit_score
@@ -134,6 +144,23 @@ Response:
     "ylabel": "Ümumi Məbləğ (₼)"
   },
   "explanation": "RFM analizi: Müştərilər əməliyyat sayı (F), ümumi dəyər (M) və son əməliyyat tarixi (R) əsasında təhlil edilir. 20 ən aktiv müştəri göstərilir."
+}
+
+Example 5 - Customer Lifetime Value: "CLV hesabla" or "LTV göstər" or "müştəri həyat boyu dəyəri"
+CLV (Customer Lifetime Value) and LTV (Lifetime Value) are the SAME metric - total transaction value per customer.
+Response:
+{
+  "query": "SET search_path TO demo_bank; SELECT c.customer_id, c.first_name, c.last_name, COALESCE(SUM(t.amount), 0) as lifetime_value FROM customers c LEFT JOIN transactions t ON c.customer_id = t.customer_id GROUP BY c.customer_id, c.first_name, c.last_name ORDER BY lifetime_value DESC LIMIT 20",
+  "needs_chart": true,
+  "chart_type": "bar",
+  "chart_config": {
+    "x_column": "first_name",
+    "y_column": "lifetime_value",
+    "title": "Müştərilərin Həyat Boyu Dəyəri (CLV/LTV)",
+    "xlabel": "Müştəri",
+    "ylabel": "Həyat Boyu Dəyər (₼)"
+  },
+  "explanation": "CLV (Customer Lifetime Value): Hər müştərinin bütün əməliyyatlarının ümumi dəyəri. Ən yüksək CLV-yə malik 20 müştəri göstərilir."
 }
 
 IMPORTANT REMINDER: You MUST return ONLY valid JSON. Do NOT include any explanatory text before or after the JSON. Do NOT use markdown formatting. Return ONLY the JSON object starting with { and ending with }.`;
