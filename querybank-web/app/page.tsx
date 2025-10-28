@@ -341,7 +341,7 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { icon: Brain, title: 'Google Gemini 2.5', desc: 'Ən yeni AI model ilə powered', color: 'from-blue-500 to-cyan-500' },
+                { icon: Brain, title: 'Google Gemini 2.5', desc: 'Ən yeni AI model ilə', color: 'from-blue-500 to-cyan-500' },
                 { icon: Zap, title: '91.5% Faster', desc: 'Prompt optimizasiyası ilə', color: 'from-yellow-500 to-orange-500' },
                 { icon: Shield, title: 'Bank Təhlükəsizliyi', desc: 'JWT, bcrypt, SQL injection qorunması', color: 'from-green-500 to-emerald-500' },
                 { icon: Activity, title: 'Real-time Data', desc: 'Canlı PostgreSQL bağlantısı', color: 'from-purple-500 to-pink-500' },
