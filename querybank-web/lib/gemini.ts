@@ -19,16 +19,17 @@ export interface QueryResponse {
   explanation: string;
 }
 
-export async function generateQuery(userQuestion: string): Promise<QueryResponse> {
+export async function generateQuery(userQuestion: string, retryCount: number = 0): Promise<QueryResponse> {
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
-      temperature: 0.3,
+      temperature: retryCount > 0 ? 0.1 : 0.3, // Lower temperature on retry for more deterministic output
       maxOutputTokens: 1024,
     }
   });
 
   const prompt = `You are a SQL query generator for a PostgreSQL banking database.
+${retryCount > 0 ? '\n⚠️ CRITICAL: Your previous response was not valid JSON. You MUST return ONLY a JSON object. NO explanations, NO text before or after, ONLY JSON.\n' : ''}
 
 User Question: "${userQuestion}"
 
@@ -202,10 +203,45 @@ IMPORTANT REMINDER: You MUST return ONLY valid JSON. Do NOT include any explanat
     if (!jsonText) {
       console.error('Failed to extract JSON from response:', text);
       console.error('Full AI response:', text);
-      throw new Error('No JSON found in response. AI returned: ' + text.substring(0, 100));
+
+      // RETRY LOGIC: Try one more time with stricter instructions
+      if (retryCount === 0) {
+        console.warn('No JSON found, retrying with stricter prompt...');
+        return generateQuery(userQuestion, 1);
+      }
+
+      // FALLBACK: If AI didn't return JSON after retry, check if it's trying to answer the question
+      // If the response mentions CLV, LTV, RFM, etc., return a helpful error
+      const lowerText = text.toLowerCase();
+      if (lowerText.includes('clv') || lowerText.includes('ltv') ||
+          lowerText.includes('lifetime') || lowerText.includes('həyat boyu') ||
+          lowerText.includes('rfm') || lowerText.includes('recency')) {
+        return {
+          query: 'ERROR',
+          needs_chart: false,
+          chart_type: null,
+          explanation: 'AI cavab formatı düzgün deyil. Zəhmət olmasa sorğunu yenidən cəhd edin. (Metrika aşkar edildi, lakin JSON formatı düzgün deyil)'
+        };
+      }
+
+      throw new Error('No JSON found in response after retry. AI returned: ' + text.substring(0, 100));
     }
 
-    const parsed = JSON.parse(jsonText.trim());
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText.trim());
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Attempted to parse:', jsonText);
+
+      // RETRY on parse error too
+      if (retryCount === 0) {
+        console.warn('JSON parse failed, retrying with stricter prompt...');
+        return generateQuery(userQuestion, 1);
+      }
+
+      throw new Error('Failed to parse JSON: ' + jsonText.substring(0, 100));
+    }
 
     return parsed as QueryResponse;
   } catch (error) {
