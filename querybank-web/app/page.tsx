@@ -66,12 +66,14 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center space-x-4">
                 <button
+                  type="button"
                   onClick={() => router.push('/login')}
                   className="hidden sm:block px-5 py-2 text-slate-300 hover:text-white transition font-medium"
                 >
                   Daxil Ol
                 </button>
                 <button
+                  type="button"
                   onClick={() => router.push('/login')}
                   className="group relative px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl font-semibold overflow-hidden transition-all hover:scale-105"
                 >
@@ -119,6 +121,7 @@ export default function LandingPage() {
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-16">
                 <button
+                  type="button"
                   onClick={() => router.push('/login')}
                   className="group relative px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl font-bold text-lg overflow-hidden transition-all hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/50"
                 >
@@ -130,6 +133,7 @@ export default function LandingPage() {
                   </span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     const element = document.getElementById('demo-video');
                     element?.scrollIntoView({ behavior: 'smooth' });
@@ -242,6 +246,7 @@ export default function LandingPage() {
                 </div>
                 <div className="text-center">
                   <button
+                    type="button"
                     onClick={() => router.push('/login')}
                     className="group px-12 py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl font-bold text-lg hover:scale-105 transition-all inline-flex items-center space-x-3"
                   >
@@ -445,6 +450,7 @@ export default function LandingPage() {
               <span className="text-blue-400 font-bold">Demo hesabla bütün funksiyalara tam giriş.</span>
             </p>
             <button
+              type="button"
               onClick={() => router.push('/login')}
               className="group relative px-16 py-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl font-black text-2xl overflow-hidden transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50"
             >
