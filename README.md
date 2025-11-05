@@ -53,6 +53,7 @@ Your `.env` file should already contain:
 
 ```
 db_url=
+gemini_api_key=
 ```
 
 ### 4. Run the chatbot
