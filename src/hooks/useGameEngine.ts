@@ -5,30 +5,40 @@ import { PhysicsWorld, PhysicsBody } from '@/lib/physics';
 import { LevelData, Difficulty, GameState, BirdType } from '@/lib/types';
 import {
   CANVAS_WIDTH, CANVAS_HEIGHT, GROUND_Y,
-  SLINGSHOT_X, SLINGSHOT_Y, MAX_DRAG, LAUNCH_POWER,
+  SLINGSHOT_X, SLINGSHOT_Y, MAX_DRAG,
   BIRD_CONFIGS, BLOCK_HEALTH, PIG_BASE_HEALTH,
   SCORE_PER_PIG, SCORE_PER_BLOCK, SCORE_PER_LEFTOVER_BIRD,
 } from '@/lib/constants';
+
+/** Max launch speed in pixels per physics step */
+const MAX_BIRD_SPEED = 13;
+
+/** Steps to pre-simulate so blocks settle before player sees them */
+const PRESIM_STEPS = 300;
+
+/** After launch, wait this many steps before checking if bird has landed */
+const POST_LAUNCH_WAIT = 60;
 
 export interface ActiveBird {
   body: PhysicsBody;
   type: BirdType;
   launched: boolean;
   abilityUsed: boolean;
+  /** Trail dots (launched) or aim dots (dragging) */
   trajectory: { x: number; y: number }[];
 }
 
 export interface ActivePig {
   body: PhysicsBody;
   alive: boolean;
-  wobble: number; // flash timer
+  wobble: number;
 }
 
 export interface ActiveBlock {
   body: PhysicsBody;
   blockType: string;
   alive: boolean;
-  crackLevel: number; // 0..2
+  crackLevel: number; // 0-2
 }
 
 export interface Particle {
@@ -53,21 +63,40 @@ export interface GameEngineState {
   stars: number;
 }
 
+type SoundBag = {
+  launch: () => void; hit: () => void; pigDie: () => void;
+  explode: () => void; ability: () => void; levelComplete: () => void;
+  gameOver: () => void; star: () => void;
+};
+
 export function useGameEngine(
   difficulty: Difficulty,
   onLevelComplete: (score: number, stars: number) => void,
   onGameOver: () => void,
-  soundRef: React.MutableRefObject<{
-    launch: () => void; hit: () => void; pigDie: () => void;
-    explode: () => void; ability: () => void; levelComplete: () => void;
-    gameOver: () => void; star: () => void;
-  } | null>
+  soundRef: React.MutableRefObject<SoundBag | null>
 ) {
   const worldRef = useRef<PhysicsWorld | null>(null);
-  const groundBodyRef = useRef<PhysicsBody | null>(null);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
-  const waitAfterLaunchRef = useRef<number>(0); // frames to wait before checking win
+
+  /**
+   * POST_LAUNCH_WAIT countdown — decrements each step after launch.
+   * Bird landing is only checked once this reaches 0.
+   */
+  const postLaunchRef = useRef<number>(0);
+
+  /**
+   * Guard flag: true between the moment a bird lands and the next bird
+   * appears on the slingshot. Prevents the game loop from firing
+   * shouldCheckWin every frame (the infinite-loop bug).
+   */
+  const awaitingNextBirdRef = useRef(false);
+
+  // Keep callbacks in refs so the game loop never has stale closures
+  const onLevelCompleteRef = useRef(onLevelComplete);
+  const onGameOverRef = useRef(onGameOver);
+  useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
+  useEffect(() => { onGameOverRef.current = onGameOver; }, [onGameOver]);
 
   const [state, setState] = useState<GameEngineState>({
     gameState: 'menu',
@@ -83,62 +112,72 @@ export function useGameEngine(
     levelId: 1,
     stars: 0,
   });
+
+  // Always-current mirror of React state (read in rAF callbacks without stale closure)
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // ─── Particles ───────────────────────────────────────────────────────────
 
   const spawnParticles = useCallback((
     x: number, y: number, color: string, count = 8, speed = 4
   ) => {
-    const newParticles: Particle[] = Array.from({ length: count }, () => {
+    const arr: Particle[] = Array.from({ length: count }, () => {
       const angle = Math.random() * Math.PI * 2;
       const spd = speed * (0.5 + Math.random());
       return {
         x, y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 2,
-        life: 40, maxLife: 40,
-        color, radius: 3 + Math.random() * 4,
+        life: 40, maxLife: 40, color, radius: 3 + Math.random() * 4,
       };
     });
-    setState(s => ({ ...s, particles: [...s.particles, ...newParticles] }));
+    setState(s => ({ ...s, particles: [...s.particles, ...arr] }));
   }, []);
 
+  // Keep spawnParticles available inside the stable game loop
+  const spawnParticlesRef = useRef(spawnParticles);
+  useEffect(() => { spawnParticlesRef.current = spawnParticles; }, [spawnParticles]);
+
+  // ─── Level load ──────────────────────────────────────────────────────────
+
   const loadLevel = useCallback((level: LevelData) => {
+    // Cancel any running loop so we start fresh
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    awaitingNextBirdRef.current = false;
+    postLaunchRef.current = 0;
+
     const world = new PhysicsWorld();
     world.gravity = 0.6;
 
-    // Ground (static)
-    const ground = world.addBox(
-      CANVAS_WIDTH / 2, CANVAS_HEIGHT - 15,
-      CANVAS_WIDTH * 2, 30,
-      { isStatic: true, friction: 0.6, restitution: 0.2, userData: { kind: 'ground' } }
+    // *** FIX: physics ground top = GROUND_Y (was CANVAS_HEIGHT-15, 30px too low) ***
+    world.addBox(
+      CANVAS_WIDTH / 2, GROUND_Y + 500,
+      CANVAS_WIDTH * 2, 1000,
+      { isStatic: true, friction: 0.7, restitution: 0.15, userData: { kind: 'ground' } }
     );
-    groundBodyRef.current = ground;
-
     // Side walls
-    world.addBox(-20, CANVAS_HEIGHT / 2, 40, CANVAS_HEIGHT * 2, { isStatic: true, userData: { kind: 'wall' } });
-    world.addBox(CANVAS_WIDTH + 20, CANVAS_HEIGHT / 2, 40, CANVAS_HEIGHT * 2, { isStatic: true, userData: { kind: 'wall' } });
+    world.addBox(-30, CANVAS_HEIGHT / 2, 60, CANVAS_HEIGHT * 2, { isStatic: true, userData: { kind: 'wall' } });
+    world.addBox(CANVAS_WIDTH + 30, CANVAS_HEIGHT / 2, 60, CANVAS_HEIGHT * 2, { isStatic: true, userData: { kind: 'wall' } });
 
-    const diffMul = difficulty === 'easy' ? 0.7 : difficulty === 'hard' ? 1.4 : 1.0;
+    const diffMul = difficulty === 'easy' ? 0.65 : difficulty === 'hard' ? 1.5 : 1.0;
     const pigHealth = PIG_BASE_HEALTH[difficulty];
 
-    // Pigs
+    // Build pig bodies
     const pigs: ActivePig[] = level.pigs.map(p => {
       const body = world.addCircle(p.x, p.y, p.radius, {
-        mass: 1.2,
-        restitution: 0.3,
-        friction: 0.5,
+        mass: 1.2, restitution: 0.25, friction: 0.6,
         health: pigHealth * (p.health ?? 1),
         userData: { kind: 'pig' },
       });
       return { body, alive: true, wobble: 0 };
     });
 
-    // Blocks
+    // Build block bodies
     const blocks: ActiveBlock[] = level.blocks.map(b => {
       const baseHealth = BLOCK_HEALTH[b.type as keyof typeof BLOCK_HEALTH] ?? 50;
       const body = world.addBox(b.x, b.y, b.w, b.h, {
         mass: baseHealth * 0.02 * diffMul,
-        restitution: b.type === 'glass' ? 0.5 : 0.2,
-        friction: 0.5,
+        restitution: b.type === 'glass' ? 0.4 : 0.15,
+        friction: 0.55,
         angle: (b.angle ?? 0) * Math.PI / 180,
         health: baseHealth * diffMul,
         userData: { kind: 'block', blockType: b.type },
@@ -146,20 +185,18 @@ export function useGameEngine(
       return { body, blockType: b.type, alive: true, crackLevel: 0 };
     });
 
-    // Collision handler
+    // Collision sounds
     world.onCollision(({ bodyA, bodyB, impulse }) => {
-      const kindA = bodyA.userData.kind as string;
-      const kindB = bodyB.userData.kind as string;
-      if (impulse > 3) soundRef.current?.hit();
-      if (kindA === 'bird' || kindB === 'bird') {
-        if (impulse > 8) soundRef.current?.hit();
-      }
+      void bodyA; void bodyB;
+      if (impulse > 5) soundRef.current?.hit();
     });
 
     worldRef.current = world;
 
-    setState(s => ({
-      ...s,
+    // *** FIX: Pre-simulate so blocks settle onto ground before player sees them ***
+    for (let i = 0; i < PRESIM_STEPS; i++) world.step(1);
+
+    setState(() => ({
       gameState: 'playing',
       score: 0,
       currentBirdIndex: 0,
@@ -173,56 +210,77 @@ export function useGameEngine(
       levelId: level.id,
       stars: 0,
     }));
-    waitAfterLaunchRef.current = 0;
   }, [difficulty, soundRef]);
 
-  const setNextBird = useCallback(() => {
-    const s = stateRef.current;
-    const nextIndex = s.currentBirdIndex + 1;
-    if (nextIndex >= s.birdsQueue.length) {
-      setState(prev => ({ ...prev, activeBird: null, currentBirdIndex: nextIndex }));
-      return;
-    }
-    const birdType = s.birdsQueue[nextIndex];
-    const cfg = BIRD_CONFIGS[birdType];
-    const body = worldRef.current!.addCircle(
-      SLINGSHOT_X, SLINGSHOT_Y - cfg.radius,
-      cfg.radius,
-      {
-        mass: cfg.mass, restitution: cfg.restitution, friction: 0.3,
-        isStatic: true,
-        userData: { kind: 'bird', birdType },
+  // ─── Bird management ─────────────────────────────────────────────────────
+
+  /** Places the bird at index `idx` on the slingshot as a static body */
+  const spawnBirdAtIndex = useCallback((idx: number) => {
+    setState(prev => {
+      if (idx >= prev.birdsQueue.length || !worldRef.current) {
+        return { ...prev, activeBird: null, currentBirdIndex: idx };
       }
-    );
-    setState(prev => ({
-      ...prev,
-      activeBird: { body, type: birdType, launched: false, abilityUsed: false, trajectory: [] },
-      currentBirdIndex: nextIndex,
-    }));
+      const birdType = prev.birdsQueue[idx];
+      const cfg = BIRD_CONFIGS[birdType];
+      const body = worldRef.current.addCircle(
+        SLINGSHOT_X, SLINGSHOT_Y,
+        cfg.radius,
+        { mass: cfg.mass, restitution: cfg.restitution, friction: 0.3,
+          isStatic: true, userData: { kind: 'bird', birdType } }
+      );
+      return {
+        ...prev,
+        activeBird: { body, type: birdType, launched: false, abilityUsed: false, trajectory: [] },
+        currentBirdIndex: idx,
+      };
+    });
   }, []);
 
   const readyFirstBird = useCallback(() => {
-    const s = stateRef.current;
-    if (s.birdsQueue.length === 0) return;
-    const birdType = s.birdsQueue[0];
-    const cfg = BIRD_CONFIGS[birdType];
-    const body = worldRef.current!.addCircle(
-      SLINGSHOT_X, SLINGSHOT_Y - cfg.radius,
-      cfg.radius,
-      {
-        mass: cfg.mass, restitution: cfg.restitution, friction: 0.3,
-        isStatic: true,
-        userData: { kind: 'bird', birdType },
-      }
-    );
-    setState(prev => ({
-      ...prev,
-      activeBird: { body, type: birdType, launched: false, abilityUsed: false, trajectory: [] },
-      currentBirdIndex: 0,
-    }));
-  }, []);
+    spawnBirdAtIndex(0);
+  }, [spawnBirdAtIndex]);
 
-  /** Called when user starts dragging the slingshot */
+  // ─── Win / lose check (called inside a setTimeout after bird lands) ──────
+
+  const resolveRound = useCallback(() => {
+    const s = stateRef.current;
+    if (s.gameState !== 'playing') {
+      awaitingNextBirdRef.current = false;
+      return;
+    }
+
+    const allDead = s.pigs.every(p => !p.alive);
+    if (allDead) {
+      const leftovers = Math.max(0, s.birdsQueue.length - s.currentBirdIndex - 1);
+      const totalScore = s.score + leftovers * SCORE_PER_LEFTOVER_BIRD;
+      const stars = totalScore >= 30000 ? 3 : totalScore >= 15000 ? 2 : 1;
+      soundRef.current?.levelComplete();
+      setState(prev => ({ ...prev, gameState: 'levelComplete', score: totalScore, stars }));
+      onLevelCompleteRef.current(totalScore, stars);
+      awaitingNextBirdRef.current = false;
+      return;
+    }
+
+    const nextIdx = s.currentBirdIndex + 1;
+    if (nextIdx >= s.birdsQueue.length) {
+      soundRef.current?.gameOver();
+      setState(prev => ({ ...prev, gameState: 'gameover' }));
+      onGameOverRef.current();
+      awaitingNextBirdRef.current = false;
+      return;
+    }
+
+    // More birds available — place the next one
+    spawnBirdAtIndex(nextIdx);
+    // awaitingNextBirdRef cleared inside spawnBirdAtIndex's setState callback
+    awaitingNextBirdRef.current = false;
+  }, [soundRef, spawnBirdAtIndex]);
+
+  const resolveRoundRef = useRef(resolveRound);
+  useEffect(() => { resolveRoundRef.current = resolveRound; }, [resolveRound]);
+
+  // ─── Input handlers ──────────────────────────────────────────────────────
+
   const onDragStart = useCallback((_x: number, _y: number) => {
     const s = stateRef.current;
     if (s.gameState !== 'playing' || s.dragging) return;
@@ -233,237 +291,253 @@ export function useGameEngine(
   const onDragMove = useCallback((x: number, y: number) => {
     const s = stateRef.current;
     if (!s.dragging || !s.activeBird) return;
+
+    // Clamp drag to MAX_DRAG radius around slingshot anchor
     const dx = x - SLINGSHOT_X;
     const dy = y - SLINGSHOT_Y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
     const clamped = Math.min(dist, MAX_DRAG);
-    const nx = dist > 0 ? dx / dist : 0;
-    const ny = dist > 0 ? dy / dist : 0;
-    const cx = SLINGSHOT_X + nx * clamped;
-    const cy = SLINGSHOT_Y + ny * clamped;
+    const cx = SLINGSHOT_X + (dx / dist) * clamped;
+    const cy = SLINGSHOT_Y + (dy / dist) * clamped;
+
+    // Move physics body (static — won't be overridden by engine)
     s.activeBird.body.x = cx;
     s.activeBird.body.y = cy;
 
-    // Compute preview trajectory
-    const power = clamped * LAUNCH_POWER;
-    const vx = -(dx / dist || 0) * clamped * power * 60;
-    const vy = -(dy / dist || 0) * clamped * power * 60;
+    // *** FIX: Trajectory preview uses same units as physics launch ***
+    const power = clamped / MAX_DRAG;
+    const speed = power * MAX_BIRD_SPEED;
+    const launchVx = -(dx / dist) * speed;
+    const launchVy = -(dy / dist) * speed;
+
     const traj: { x: number; y: number }[] = [];
-    let tx = cx, ty = cy, tvx = vx * 0.016, tvy = vy * 0.016;
-    for (let i = 0; i < 30; i++) {
-      tvy += 0.6 * 0.016;
-      tx += tvx; ty += tvy;
-      if (ty > GROUND_Y) break;
-      traj.push({ x: tx, y: ty });
+    let tx = cx, ty = cy;
+    let tvx = launchVx, tvy = launchVy;
+    for (let i = 0; i < 80; i++) {
+      // Mirror exactly what the physics engine does per step
+      tvy += 0.6;       // gravity
+      tvx *= 0.998;     // linear damping
+      tvy *= 0.998;
+      tx += tvx;
+      ty += tvy;
+      if (ty > GROUND_Y + 5 || tx < -20 || tx > CANVAS_WIDTH + 20) break;
+      if (i % 2 === 0) traj.push({ x: tx, y: ty }); // every other dot for performance
     }
-    setState(prev => ({ ...prev, dragPos: { x: cx, y: cy }, activeBird: prev.activeBird ? { ...prev.activeBird, trajectory: traj } : null }));
+
+    setState(prev => ({
+      ...prev,
+      dragPos: { x: cx, y: cy },
+      activeBird: prev.activeBird ? { ...prev.activeBird, trajectory: traj } : null,
+    }));
   }, []);
 
   const onDragEnd = useCallback(() => {
     const s = stateRef.current;
-    if (!s.dragging || !s.activeBird || s.activeBird.launched) return;
-    const dx = s.activeBird.body.x - SLINGSHOT_X;
-    const dy = s.activeBird.body.y - SLINGSHOT_Y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < 5) {
+    if (!s.dragging || !s.activeBird || s.activeBird.launched) {
       setState(prev => ({ ...prev, dragging: false, dragPos: null }));
       return;
     }
-    const power = dist * LAUNCH_POWER;
-    const vx = -(dx / dist) * dist * power * 60;
-    const vy = -(dy / dist) * dist * power * 60;
-    s.activeBird.body.isStatic = false;
-    s.activeBird.body.invMass = 1 / s.activeBird.body.mass;
-    s.activeBird.body.vx = vx * 0.016;
-    s.activeBird.body.vy = vy * 0.016;
-    s.activeBird.launched = true;
+
+    const dx = s.activeBird.body.x - SLINGSHOT_X;
+    const dy = s.activeBird.body.y - SLINGSHOT_Y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Too small a drag — snap bird back to slingshot center
+    if (dist < 6) {
+      s.activeBird.body.x = SLINGSHOT_X;
+      s.activeBird.body.y = SLINGSHOT_Y;
+      setState(prev => ({ ...prev, dragging: false, dragPos: null,
+        activeBird: prev.activeBird ? { ...prev.activeBird, trajectory: [] } : null }));
+      return;
+    }
+
+    // *** FIX: Simple, correct velocity formula ***
+    // power ∈ [0,1] at max drag; speed in pixels per physics step
+    const power = Math.min(dist / MAX_DRAG, 1);
+    const speed = power * MAX_BIRD_SPEED;
+
+    const body = s.activeBird.body;
+    body.isStatic = false;
+    body.invMass = 1 / body.mass;
+    body.vx = -(dx / dist) * speed;
+    body.vy = -(dy / dist) * speed;
+    body.sleeping = false;
+    body.sleepTimer = 0;
+
     soundRef.current?.launch();
-    waitAfterLaunchRef.current = 180; // ~3s at 60fps
+    postLaunchRef.current = POST_LAUNCH_WAIT;
+
     setState(prev => ({
       ...prev,
       dragging: false,
       dragPos: null,
-      activeBird: prev.activeBird ? { ...prev.activeBird, launched: true, trajectory: [] } : null,
+      activeBird: prev.activeBird
+        ? { ...prev.activeBird, launched: true, trajectory: [] }
+        : null,
     }));
   }, [soundRef]);
 
-  /** Activate bird special ability */
   const onAbility = useCallback(() => {
     const s = stateRef.current;
     if (!s.activeBird || !s.activeBird.launched || s.activeBird.abilityUsed) return;
     const { type, body } = s.activeBird;
-    const world = worldRef.current!;
+    const world = worldRef.current;
+    if (!world) return;
+
     soundRef.current?.ability();
 
     if (type === 'yellow') {
-      body.vx *= 2.5;
-      body.vy *= 2.5;
-      spawnParticles(body.x, body.y, '#ffd166', 6, 5);
+      // Speed boost — multiply current velocity
+      const spd = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+      if (spd > 0) {
+        body.vx = (body.vx / spd) * (spd * 2.2);
+        body.vy = (body.vy / spd) * (spd * 2.2);
+      }
+      spawnParticlesRef.current(body.x, body.y, '#ffd166', 8, 5);
+
     } else if (type === 'black') {
-      // Explosion — push nearby bodies
-      spawnParticles(body.x, body.y, '#ff6b35', 20, 8);
+      // Explosion
       soundRef.current?.explode();
+      spawnParticlesRef.current(body.x, body.y, '#ff6b35', 25, 9);
       for (const b of world.bodies) {
         if (b.isStatic || b.id === body.id) continue;
-        const dx = b.x - body.x, dy = b.y - body.y;
+        const dx = b.x - body.x;
+        const dy = b.y - body.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const force = Math.max(0, (120 - dist)) * 0.8;
+        const force = Math.max(0, 140 - dist) * 0.9;
+        if (force <= 0) continue;
         b.vx += (dx / dist) * force * b.invMass;
-        b.vy += (dy / dist) * force * b.invMass - 3;
+        b.vy += (dy / dist) * force * b.invMass - 2;
         b.sleeping = false;
-        b.health -= force * 2;
+        b.health -= force * 1.5;
       }
       body.health = 0;
+
     } else if (type === 'blue') {
-      // Split into 3
-      const angles = [-0.4, 0, 0.4];
-      for (const angle of angles) {
-        const spd = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
-        const baseAngle = Math.atan2(body.vy, body.vx);
-        const newBody = world.addCircle(body.x, body.y, 10, {
-          mass: 0.5, restitution: 0.4, friction: 0.3,
+      // Split into 3 fragments
+      const baseAngle = Math.atan2(body.vy, body.vx);
+      const spd = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+      for (const angleDelta of [-0.35, 0, 0.35]) {
+        const nb = world.addCircle(body.x, body.y, 10, {
+          mass: 0.45, restitution: 0.4, friction: 0.3,
           userData: { kind: 'bird', birdType: 'blue' },
         });
-        newBody.vx = Math.cos(baseAngle + angle) * spd;
-        newBody.vy = Math.sin(baseAngle + angle) * spd;
+        nb.vx = Math.cos(baseAngle + angleDelta) * spd;
+        nb.vy = Math.sin(baseAngle + angleDelta) * spd;
       }
       body.health = 0;
-      spawnParticles(body.x, body.y, '#4fc3f7', 10, 5);
+      spawnParticlesRef.current(body.x, body.y, '#4fc3f7', 10, 5);
     }
 
     setState(prev => ({
       ...prev,
       activeBird: prev.activeBird ? { ...prev.activeBird, abilityUsed: true } : null,
     }));
-  }, [spawnParticles, soundRef]);
+  }, [soundRef]);
 
-  const checkWinLose = useCallback(() => {
-    const s = stateRef.current;
-    if (s.gameState !== 'playing') return;
+  // ─── Main game loop (stable — no React state dependencies) ───────────────
 
-    const allPigsDead = s.pigs.every(p => !p.alive);
-    if (allPigsDead) {
-      const leftovers = Math.max(0, s.birdsQueue.length - s.currentBirdIndex - 1);
-      const bonus = leftovers * SCORE_PER_LEFTOVER_BIRD;
-      const totalScore = s.score + bonus;
-      const stars = totalScore >= 30000 ? 3 : totalScore >= 18000 ? 2 : 1;
-      soundRef.current?.levelComplete();
-      setState(prev => ({ ...prev, gameState: 'levelComplete', score: totalScore, stars }));
-      onLevelComplete(totalScore, stars);
-      return;
-    }
-
-    const outOfBirds = s.currentBirdIndex >= s.birdsQueue.length && !s.activeBird;
-    if (outOfBirds) {
-      soundRef.current?.gameOver();
-      setState(prev => ({ ...prev, gameState: 'gameover' }));
-      onGameOver();
-    }
-  }, [onLevelComplete, onGameOver, soundRef]);
-
-  // Main game loop
   const gameLoop = useCallback((timestamp: number) => {
     const dt = Math.min((timestamp - (lastTimeRef.current || timestamp)) / 1000, 0.05);
     lastTimeRef.current = timestamp;
 
     const s = stateRef.current;
+
     if (s.gameState !== 'playing') {
       rafRef.current = requestAnimationFrame(gameLoop);
       return;
     }
 
     const world = worldRef.current;
-    if (!world) { rafRef.current = requestAnimationFrame(gameLoop); return; }
+    if (!world) {
+      rafRef.current = requestAnimationFrame(gameLoop);
+      return;
+    }
 
-    // Step physics (60fps equivalent)
-    const steps = Math.max(1, Math.round(dt * 60));
+    // Step physics — catch-up if frame was slow (cap at 3 steps)
+    const steps = Math.min(Math.max(1, Math.round(dt * 60)), 3);
     for (let i = 0; i < steps; i++) world.step(1);
 
-    // Sync active bird trajectory
+    if (postLaunchRef.current > 0) postLaunchRef.current -= steps;
+
+    // ─ Update launched-bird trail ─
     if (s.activeBird?.launched) {
       const b = s.activeBird.body;
       s.activeBird.trajectory.push({ x: b.x, y: b.y });
-      if (s.activeBird.trajectory.length > 40) s.activeBird.trajectory.shift();
+      if (s.activeBird.trajectory.length > 50) s.activeBird.trajectory.shift();
     }
 
-    // Update pigs
-    let pigScoreGained = 0;
+    // ─ Destroy dead pigs ─
+    let pigScore = 0;
     const updatedPigs = s.pigs.map(p => {
       if (!p.alive) return p;
       if (p.body.health <= 0) {
         world.remove(p.body.id);
-        spawnParticles(p.body.x, p.body.y, '#78c800', 12, 6);
+        spawnParticlesRef.current(p.body.x, p.body.y, '#78c800', 14, 6);
         soundRef.current?.pigDie();
-        pigScoreGained += SCORE_PER_PIG;
+        pigScore += SCORE_PER_PIG;
         return { ...p, alive: false };
       }
-      const hit = p.body.health < p.body.maxHealth * 0.7;
-      return { ...p, wobble: hit ? p.wobble + 1 : Math.max(0, p.wobble - 1) };
+      const hurt = p.body.health < p.body.maxHealth * 0.65;
+      return { ...p, wobble: hurt ? p.wobble + 1 : Math.max(0, p.wobble - 1) };
     });
 
-    // Update blocks
-    let blockScoreGained = 0;
+    // ─ Destroy dead blocks ─
+    let blockScore = 0;
     const updatedBlocks = s.blocks.map(b => {
       if (!b.alive) return b;
       if (b.body.health <= 0) {
         world.remove(b.body.id);
-        spawnParticles(b.body.x, b.body.y, '#c8a46e', 6, 3);
-        blockScoreGained += SCORE_PER_BLOCK;
+        spawnParticlesRef.current(b.body.x, b.body.y, '#c8a46e', 7, 3);
+        blockScore += SCORE_PER_BLOCK;
         return { ...b, alive: false };
       }
       const ratio = b.body.health / b.body.maxHealth;
-      const crack = ratio > 0.66 ? 0 : ratio > 0.33 ? 1 : 2;
-      return { ...b, crackLevel: crack };
+      return { ...b, crackLevel: ratio > 0.66 ? 0 : ratio > 0.33 ? 1 : 2 };
     });
 
-    // Update particles
+    // ─ Age particles ─
     const updatedParticles = s.particles
-      .map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.2, life: p.life - 1 }))
-      .filter(p => p.life > 0 && p.y < CANVAS_HEIGHT + 50);
+      .map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.18, life: p.life - 1 }))
+      .filter(p => p.life > 0 && p.y < CANVAS_HEIGHT + 100);
 
-    // Check if active bird is off screen or at rest
-    let newActiveBird = s.activeBird;
-    let newBirdIndex = s.currentBirdIndex;
-    let shouldCheckWin = false;
-
-    if (s.activeBird?.launched) {
+    // ─ Detect bird landing ─
+    // *** FIX: `awaitingNextBirdRef` prevents this block from firing every frame ***
+    let birdRemoved = false;
+    if (
+      s.activeBird?.launched &&
+      !awaitingNextBirdRef.current &&
+      postLaunchRef.current <= 0
+    ) {
       const b = s.activeBird.body;
-      const offScreen = b.x < -50 || b.x > CANVAS_WIDTH + 50 || b.y > CANVAS_HEIGHT + 50;
-      const resting = b.sleeping && b.y > GROUND_Y - 50;
-      if ((offScreen || resting) && waitAfterLaunchRef.current <= 0) {
+      const offScreen =
+        b.x < -100 || b.x > CANVAS_WIDTH + 100 || b.y > CANVAS_HEIGHT + 100;
+      const atRest =
+        b.sleeping && b.y > GROUND_Y - 80;
+
+      if (offScreen || atRest) {
         world.remove(b.id);
-        newActiveBird = null;
-        shouldCheckWin = true;
+        birdRemoved = true;
+        awaitingNextBirdRef.current = true; // ← prevents re-trigger
+
+        // Delay so player can see the last collision
+        setTimeout(() => resolveRoundRef.current(), 700);
       }
     }
 
-    if (waitAfterLaunchRef.current > 0) waitAfterLaunchRef.current--;
-
-    const scoreGain = pigScoreGained + blockScoreGained;
-
+    // *** FIX: use explicit `birdRemoved` flag, not `null ??` which ignored null ***
     setState(prev => ({
       ...prev,
       pigs: updatedPigs,
       blocks: updatedBlocks,
       particles: updatedParticles,
-      score: prev.score + scoreGain,
-      activeBird: newActiveBird ?? prev.activeBird,
-      currentBirdIndex: newBirdIndex,
+      score: prev.score + pigScore + blockScore,
+      activeBird: birdRemoved ? null : prev.activeBird,
     }));
 
-    if (shouldCheckWin) {
-      setTimeout(() => {
-        checkWinLose();
-        // Schedule next bird
-        const s2 = stateRef.current;
-        if (s2.gameState === 'playing' && !s2.activeBird) {
-          setNextBird();
-        }
-      }, 800);
-    }
-
     rafRef.current = requestAnimationFrame(gameLoop);
-  }, [spawnParticles, checkWinLose, setNextBird, soundRef]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ← stable: reads everything through refs, no stale closures
 
   const startLoop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -472,7 +546,10 @@ export function useGameEngine(
   }, [gameLoop]);
 
   const stopLoop = useCallback(() => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
   }, []);
 
   const pause = useCallback(() => {
@@ -483,9 +560,7 @@ export function useGameEngine(
     setState(prev => ({ ...prev, gameState: 'playing' }));
   }, []);
 
-  useEffect(() => {
-    return () => stopLoop();
-  }, [stopLoop]);
+  useEffect(() => () => stopLoop(), [stopLoop]);
 
   return {
     state,

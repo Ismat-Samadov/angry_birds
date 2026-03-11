@@ -31,17 +31,16 @@ export default function GameCanvas({
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const scaleRef = useRef(1);
-  const offsetRef = useRef({ x: 0, y: 0 });
 
-  // Compute canvas → game coordinates
+  // Convert screen pixels → game canvas pixels using the actual rendered rect
   const toGameCoords = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const x = (clientX - rect.left) / scaleRef.current;
-    const y = (clientY - rect.top) / scaleRef.current;
-    return { x, y };
+    return {
+      x: (clientX - rect.left) * (CANVAS_WIDTH / rect.width),
+      y: (clientY - rect.top) * (CANVAS_HEIGHT / rect.height),
+    };
   }, []);
 
   // Mouse handlers
@@ -90,21 +89,7 @@ export default function GameCanvas({
     onDragEnd();
   }, [onDragEnd]);
 
-  // Responsive scale
-  useEffect(() => {
-    const updateScale = () => {
-      const container = containerRef.current;
-      if (!container) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      const scale = Math.min(w / CANVAS_WIDTH, h / CANVAS_HEIGHT, 1);
-      scaleRef.current = scale;
-    };
-    updateScale();
-    const ro = new ResizeObserver(updateScale);
-    if (containerRef.current) ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, []);
+  // (No manual scale tracking needed — toGameCoords reads the live canvas rect)
 
   // Draw everything
   useEffect(() => {
@@ -116,35 +101,37 @@ export default function GameCanvas({
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     const bg = BACKGROUNDS[background] ?? BACKGROUNDS.sky1;
 
-    // Sky gradient
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT * 0.7);
+    // Sky — from top to GROUND_Y
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
     skyGrad.addColorStop(0, bg[0]);
     skyGrad.addColorStop(1, bg[1]);
     ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT * 0.7);
+    ctx.fillRect(0, 0, CANVAS_WIDTH, GROUND_Y);
 
-    // Ground gradient
-    const gndGrad = ctx.createLinearGradient(0, CANVAS_HEIGHT * 0.65, 0, CANVAS_HEIGHT);
-    gndGrad.addColorStop(0, '#5a9e3a');
-    gndGrad.addColorStop(0.15, '#4a8e2a');
-    gndGrad.addColorStop(1, '#3a6e1a');
-    ctx.fillStyle = gndGrad;
-    ctx.fillRect(0, CANVAS_HEIGHT * 0.65, CANVAS_WIDTH, CANVAS_HEIGHT * 0.35);
+    // Grass strip — 22px band right at GROUND_Y
+    const grassGrad = ctx.createLinearGradient(0, GROUND_Y - 5, 0, GROUND_Y + 22);
+    grassGrad.addColorStop(0, '#7ac832');
+    grassGrad.addColorStop(1, '#4a8e2a');
+    ctx.fillStyle = grassGrad;
+    ctx.fillRect(0, GROUND_Y - 5, CANVAS_WIDTH, 27);
 
-    // Ground line / dirt
-    ctx.fillStyle = '#8B6914';
-    ctx.fillRect(0, GROUND_Y + 20, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y - 20);
+    // Earth / dirt below grass
+    const dirtGrad = ctx.createLinearGradient(0, GROUND_Y + 22, 0, CANVAS_HEIGHT);
+    dirtGrad.addColorStop(0, '#7a5228');
+    dirtGrad.addColorStop(1, '#3a2010');
+    ctx.fillStyle = dirtGrad;
+    ctx.fillRect(0, GROUND_Y + 22, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y - 22);
 
     // Clouds
     drawClouds(ctx, bg[0]);
 
-    // Trajectory dots
+    // Slingshot (arms behind everything else)
+    drawSlingshot(ctx);
+
+    // Trajectory dots (aim preview — over slingshot arms, under bird)
     if (engineState.activeBird && !engineState.activeBird.launched && engineState.dragPos) {
       drawTrajectory(ctx, engineState.activeBird.trajectory);
     }
-
-    // Slingshot
-    drawSlingshot(ctx);
 
     // Waiting birds (queue)
     drawBirdQueue(ctx, engineState.birdsQueue, engineState.currentBirdIndex);
@@ -159,12 +146,17 @@ export default function GameCanvas({
       if (p.alive) drawPig(ctx, p);
     });
 
+    // Launched-bird trail (dots behind the bird)
+    if (engineState.activeBird?.launched && engineState.activeBird.trajectory.length > 1) {
+      drawTrajectory(ctx, engineState.activeBird.trajectory);
+    }
+
     // Active bird
     if (engineState.activeBird) {
       drawBird(ctx, engineState.activeBird);
     }
 
-    // Slingshot bands (on top of bird)
+    // Slingshot bands drawn ON TOP of bird while on slingshot
     if (engineState.activeBird && !engineState.activeBird.launched) {
       drawSlingshotBands(ctx, engineState.activeBird.body.x, engineState.activeBird.body.y);
     }
@@ -226,43 +218,49 @@ function drawClouds(ctx: CanvasRenderingContext2D, skyColor: string) {
 }
 
 function drawSlingshot(ctx: CanvasRenderingContext2D) {
-  // Fork arms
-  ctx.strokeStyle = '#5c3a1e';
-  ctx.lineWidth = 8;
   ctx.lineCap = 'round';
-  // Left arm
+
+  // Base stick
+  ctx.strokeStyle = '#5c3a1e';
+  ctx.lineWidth = 14;
   ctx.beginPath();
-  ctx.moveTo(SLINGSHOT_X - 5, GROUND_Y);
-  ctx.quadraticCurveTo(SLINGSHOT_X - 20, GROUND_Y - 40, SLINGSHOT_X - 22, SLINGSHOT_Y);
+  ctx.moveTo(SLINGSHOT_X, GROUND_Y + 2);
+  ctx.lineTo(SLINGSHOT_X, GROUND_Y - 20);
   ctx.stroke();
-  // Right arm
+
+  // Left fork arm
+  ctx.lineWidth = 8;
   ctx.beginPath();
-  ctx.moveTo(SLINGSHOT_X + 5, GROUND_Y);
-  ctx.quadraticCurveTo(SLINGSHOT_X + 20, GROUND_Y - 40, SLINGSHOT_X + 22, SLINGSHOT_Y);
+  ctx.moveTo(SLINGSHOT_X, GROUND_Y - 10);
+  ctx.quadraticCurveTo(SLINGSHOT_X - 18, GROUND_Y - 40, SLINGSHOT_X - 20, SLINGSHOT_Y);
   ctx.stroke();
-  // Base / stick
-  ctx.lineWidth = 12;
+
+  // Right fork arm
   ctx.beginPath();
-  ctx.moveTo(SLINGSHOT_X, GROUND_Y + 10);
-  ctx.lineTo(SLINGSHOT_X, GROUND_Y);
+  ctx.moveTo(SLINGSHOT_X, GROUND_Y - 10);
+  ctx.quadraticCurveTo(SLINGSHOT_X + 18, GROUND_Y - 40, SLINGSHOT_X + 20, SLINGSHOT_Y);
   ctx.stroke();
-  // Fork tips
+
+  // Fork tip knobs
   ctx.fillStyle = '#7a4f28';
   ctx.beginPath();
-  ctx.arc(SLINGSHOT_X - 22, SLINGSHOT_Y, 5, 0, Math.PI * 2);
-  ctx.arc(SLINGSHOT_X + 22, SLINGSHOT_Y, 5, 0, Math.PI * 2);
+  ctx.arc(SLINGSHOT_X - 20, SLINGSHOT_Y, 5, 0, Math.PI * 2);
+  ctx.arc(SLINGSHOT_X + 20, SLINGSHOT_Y, 5, 0, Math.PI * 2);
   ctx.fill();
 }
 
 function drawSlingshotBands(ctx: CanvasRenderingContext2D, bx: number, by: number) {
-  ctx.strokeStyle = '#8B4513';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#6B3410';
+  ctx.lineWidth = 3.5;
+  ctx.lineCap = 'round';
+  // Left band: fork tip → bird (drawn BEHIND the bird in draw order)
   ctx.beginPath();
-  ctx.moveTo(SLINGSHOT_X - 22, SLINGSHOT_Y);
+  ctx.moveTo(SLINGSHOT_X - 20, SLINGSHOT_Y);
   ctx.lineTo(bx, by);
   ctx.stroke();
+  // Right band
   ctx.beginPath();
-  ctx.moveTo(SLINGSHOT_X + 22, SLINGSHOT_Y);
+  ctx.moveTo(SLINGSHOT_X + 20, SLINGSHOT_Y);
   ctx.lineTo(bx, by);
   ctx.stroke();
 }
