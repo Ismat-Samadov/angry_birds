@@ -11,6 +11,23 @@ An intelligent chatbot that answers questions about your banking database using 
 - **Real-time Analysis**: Connects directly to your PostgreSQL database
 - **Multiple Chart Types**: Bar charts, line charts, pie charts, and scatter plots
 
+## Screenshots
+
+### Landing Page
+![Landing Page](screens/landing%20page.png)
+
+### Login Page
+![Login Page](screens/login%20page.png)
+
+### Chatbot Page
+![Chatbot Page](screens/chatbot%20page.png)
+
+### SQL Query Page
+![SQL Query Page](screens/sql%20query%20page.png)
+
+### Analytics Page
+![Analytics Page](screens/analytics%20page.png)
+
 ## Architecture
 
 ```
